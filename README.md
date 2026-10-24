@@ -8,7 +8,7 @@ Evaluating the effects of data poisoning on a federated learning (FL) model for 
 
 Federated learning lets multiple clients (ex., hospitals) train a shared global model without pooling their raw data. That same decentralization makes FL vulnerbale to data poisoning: a malcious client can submit corrupted local updates to degrade or backdoor the global model.
 
-We are simulating this setup using the [MedMNIST](https://medmnist.com) dataset and the flower [Flower](https://flower.ai/) FL framework: is to train a clean federated baseline across multiple simulated clients, introduce one or more malicious/poisoned clients, meausre how much is the damage, then evaluate aggregation methods. For example, coordinate-wise median or trimmed mean, as a defense.
+We are simulating this setup using the [MedMNIST](https://medmnist.com) dataset and the [Flower](https://flower.ai/) FL framework. MedMNIST and Flower are used to train a clean federated baseline across multiple simulated clients, introduce one or more malicious/poisoned clients, measure damage to the model, then evaluate aggregation methods (for example, coordinate-wise median or trimmed mean, as a defense).
 
 ## Research Questions
 
