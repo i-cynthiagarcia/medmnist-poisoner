@@ -50,4 +50,9 @@ Research Questions:
 - J. Yang et al., "MedMNIST v2 - A large-scale lightweight benchmark for 2D and 3D biomedical image classification," *Scientific Data*, vol. 10, no. 1, p. 41, 2023.
 - Flower: A Friendly Federated Learning Framework. https://flower.ai/
 - Tolpegin et al., "Data Poisoning Attacks Against Federated Learning Systems." https://arxiv.org/pdf/2007.08432
-- Rodríguez-Barroso et al., "Federated Learning Under Attack: Exposing Vulnerabilities through Data
+- Rodríguez-Barroso et al., "Federated Learning Under Attack: Exposing Vulnerabilities through Data Poisoning Attacks in Computer Networks." https://arxiv.org/pdf/2403.02983
+
+
+
+
+
