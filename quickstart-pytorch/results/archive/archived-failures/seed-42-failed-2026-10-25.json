@@ -1,0 +1,46 @@
+{
+  "run_id": "2492591431939386280",
+  "dataset": "OrganAMNIST",
+  "status": "failed_training",
+  "aggregation": "FedAvg",
+  "seed": 42,
+  "configuration": {
+    "clients": 20,
+    "federated_rounds": 3,
+    "local_epochs": 1,
+    "learning_rate": 0.001,
+    "batch_size": 32,
+    "fraction_evaluate": 0.0
+  },
+  "metrics": {
+    "round": {
+      "0": {
+        "accuracy": 0.096748790640117,
+        "loss": 2.4009846045816543
+      },
+      "1": {
+        "accuracy": 0.096748790640117,
+        "loss": 2.4009846045816543
+      },
+      "2": {
+        "accuracy": 0.096748790640117,
+        "loss": 2.4009846045816543
+      },
+      "3": {
+        "accuracy": 0.096748790640117,
+        "loss": 2.4009846045816543
+      }
+    }
+  },
+  "training_results": {
+    "received_results": 0,
+    "client_failures": 20,
+    "failure_type": "ray.exceptions.ActorDiedError",
+    "worker_exit_type": "SYSTEM_ERROR",
+    "worker_exit_code": 1,
+    "worker_exit_signal": "SIGTERM",
+    "aggregated_client_train_metrics": {}
+  },
+  "runtime_seconds": 30.69,
+  "notes": "All 20 client training results failed because the Ray ClientAppActor died unexpectedly before completing the task. The reported evaluation accuracy and loss are unchanged across rounds in the supplied output and should not be treated as a valid trained baseline."
+}

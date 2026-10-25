@@ -55,14 +55,67 @@ You can run your Flower project in both _simulation_ and _deployment_ mode witho
 > This example runs faster when the `ClientApp`s have access to a GPU. Check the [Simulation Engine documentation](https://flower.ai/docs/framework/how-to-run-simulations.html) to learn more about Flower simulations and how to optimize them.
 
 ```bash
-# Run with the default federation (CPU only)
-flwr run .  --stream
+# Run OrganAMNIST with 20 simulated clients (CPU only)
+flwr run . \
+  --federation-config "num-supernodes=20" \
+  --run-config "dataset=\"organamnist\" seed=42" \
+  --stream
 ```
 
-You can also override some of the settings for your `ClientApp` and `ServerApp` defined in `pyproject.toml`. For example:
+The supported Organ datasets are `organamnist`, `organcmnist`, and `organsmnist`. Override the dataset and seed without editing source files:
 
 ```bash
-flwr run . --run-config "num-server-rounds=5 learning-rate=0.05"  --stream
+# OrganCMNIST
+flwr run . \
+  --federation-config "num-supernodes=20" \
+  --run-config "dataset=\"organcmnist\" seed=42" \
+  --stream
+
+# OrganSMNIST
+flwr run . \
+  --federation-config "num-supernodes=20" \
+  --run-config "dataset=\"organsmnist\" seed=42" \
+  --stream
+```
+
+You can also override training settings defined in `pyproject.toml`:
+
+```bash
+flwr run . \
+  --federation-config "num-supernodes=20" \
+  --run-config "dataset=\"organamnist\" seed=42 num-server-rounds=5 local-epochs=3 learning-rate=0.01 batch-size=32" \
+  --stream
+```
+
+To run one dataset across seeds 42, 43, and 44, use this Bash loop in the terminal:
+
+```bash
+for seed in 42 43 44; do
+  flwr run . \
+    --federation-config "num-supernodes=20" \
+    --run-config "dataset=\"organcmnist\" seed=$seed" \
+    --stream
+done
+```
+
+The loop syntax works in Bash and generally in zsh. It stops or continues between separate Flower commands. Each command should be recorded as a separate JSON result using its seed and run ID.
+
+### Check Client Data Distribution
+
+Use `check_distribution.py` to inspect the uniform client partition independently of a Flower run. It uses the same seeded permutation and interleaved partitioning as `load_data()` in `pytorchexample/task.py`.
+
+```bash
+python check_distribution.py \
+  --dataset organcmnist \
+  --num-clients 20 \
+  --seed 42 \
+  --size 28
+```
+
+Supported datasets are `organamnist`, `organcmnist`, and `organsmnist`. The defaults are dataset `organamnist`, 20 clients, seed 42, and image size 28. View all options with:
+
+```bash
+python check_distribution.py --help
 ```
 
 > [!TIP]

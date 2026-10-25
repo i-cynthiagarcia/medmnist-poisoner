@@ -8,9 +8,10 @@ name = "quickstart-pytorch"
 version = "1.1.6"
 description = "OrganAMNIST Clean Federated Learning Baseline"
 license = {file = "LICENSE"}
+requires-python = ">=3.10,<3.14"
 dependencies = [
-    "flwr[simulation]>=1.30.0,<1.31.0",
-    "torch>=2.0.0",
+    "flwr[simulation]>=1.30,<1.31",
+    "torch>=2.0",
     "torchvision",
     "medmnist",
     "numpy",
@@ -30,6 +31,9 @@ serverapp = "pytorchexample.server_app:app"
 clientapp = "pytorchexample.client_app:app"
 
 [tool.flwr.app.config]
+dataset = "organamnist"
+seed = 42
+num-clients = 20
 num-server-rounds = 3
 fraction-evaluate = 0.0
 local-epochs = 1
