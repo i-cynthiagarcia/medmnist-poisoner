@@ -43,7 +43,13 @@ def json_value(value):
     return str(value)
 
 
-def save_run_result(context: Context, result, num_rounds: int, strategy: VerifiedFedAvg) -> Path:
+def save_run_result(
+    context: Context,
+    result,
+    num_rounds: int,
+    strategy: VerifiedFedAvg,
+    test_metrics: MetricRecord | None,
+) -> Path:
     """Save centralized and training metrics for one completed Flower run."""
     dataset = context.run_config["dataset"]
     seed = context.run_config["seed"]
@@ -95,7 +101,12 @@ def save_run_result(context: Context, result, num_rounds: int, strategy: Verifie
             "fraction_evaluate": context.run_config["fraction-evaluate"],
         },
         "metrics": {
-            "round": server_metrics,
+            "validation_by_round": server_metrics,
+            "test_final": (
+                {key: json_value(value) for key, value in test_metrics.items()}
+                if test_metrics is not None
+                else None
+            ),
         },
         "client_train_metrics": client_train_metrics,
         "training_results": {
@@ -147,7 +158,13 @@ def main(grid: Grid, context: Context) -> None:
         evaluate_fn=global_evaluate,
     )
 
-    result_path = save_run_result(context, result, num_rounds, strategy)
+    test_metrics = None
+    if context.run_config["evaluate-test"]:
+        test_metrics = evaluate_arrays(result.arrays, "test")
+
+    result_path = save_run_result(
+        context, result, num_rounds, strategy, test_metrics
+    )
     print(f"\nSaving run results to {result_path}...")
 
     if context.run_config["save-model"]:
@@ -167,7 +184,12 @@ def main(grid: Grid, context: Context) -> None:
 
 
 def global_evaluate(server_round: int, arrays: ArrayRecord) -> MetricRecord:
-    """Evaluate model on central data."""
+    """Evaluate the global model on validation data during training."""
+    return evaluate_arrays(arrays, "val")
+
+
+def evaluate_arrays(arrays: ArrayRecord, split: str) -> MetricRecord:
+    """Evaluate model arrays on a centralized dataset split."""
 
     # Load the model and initialize it with the received weights
     model = Net()
@@ -175,11 +197,9 @@ def global_evaluate(server_round: int, arrays: ArrayRecord) -> MetricRecord:
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
-    # Load entire test set
-    test_dataloader = load_centralized_dataset()
+    dataloader = load_centralized_dataset(split)
 
-    # Evaluate the global model on the test set
-    test_loss, test_acc = test(model, test_dataloader, device)
+    eval_loss, eval_acc = test(model, dataloader, device)
 
     # Return the evaluation metrics
-    return MetricRecord({"accuracy": test_acc, "loss": test_loss})
+    return MetricRecord({"accuracy": eval_acc, "loss": eval_loss})

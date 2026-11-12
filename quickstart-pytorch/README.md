@@ -100,6 +100,13 @@ done
 
 The loop syntax works in Bash and generally in zsh. It stops or continues between separate Flower commands. Each command should be recorded as a separate JSON result using its seed and run ID.
 
+The server evaluates on the centralized validation split at initialization and
+after each round. Test-set evaluation is disabled by default while selecting
+training settings. Once the protocol is fixed, set `evaluate-test=true` to
+evaluate the final model once on the official test split; those metrics are
+recorded separately from per-round validation metrics. Do not use test metrics
+to select training settings.
+
 ### Check Client Data Distribution
 
 Use `check_distribution.py` to inspect the uniform client partition independently of a Flower run. It uses the same seeded permutation and interleaved partitioning as `load_data()` in `pytorchexample/task.py`.

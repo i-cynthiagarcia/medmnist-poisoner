@@ -9,8 +9,7 @@
 
 ## Historical Baseline 
 
-The settings below describe the originally reported OrganAMNIST historical
-baseline. 
+The settings below describe the originally reported OrganAMNIST historical baseline. 
 
 - Clients: 20
 - Federated rounds: 3
@@ -20,8 +19,7 @@ baseline.
 
 ### Historical Results
 
-These are the originally reported results. They are retained separately from
-the summaries of runs recorded with references below.
+These are the originally reported results. They are retained separately from the summaries of runs recorded with references below.
 
 The values below came from an earlier run and have not yet been verified against the current seeded implementation.
 
@@ -74,9 +72,7 @@ Individual records:
 - [seed 44](results/organsmnist/baseline_r3_e1_lr0p001/seed-44.json)
 
 ## Expanded Parameter Sweep (Seeds 42, 43, 44)
-The expanded parameter sweep varies the number of rounds, local epochs, and learning rate; see its table for each run's configuration. All runs below completed with 20 clients and passed the recorded run-validity
-check. Accuracy and standard deviation are across the three seeds at the final
-round of each run. Standard deviations are in percentage points.
+The expanded parameter sweep varies the number of rounds, local epochs, and learning rate; see its table for each run's configuration. All runs below completed with 20 clients and passed the recorded run-validity check. Accuracy and standard deviation are across the three seeds at the final round of each run. Standard deviations are in percentage points.
 
 | Dataset | Rounds | Local epochs | Learning rate | Mean final accuracy | Std. dev. |
 |---------|-------:|-------------:|--------------:|--------------------:|----------:|
@@ -102,42 +98,20 @@ round of each run. Standard deviations are in percentage points.
 | OrganSMNIST | 5 | 1 | 0.1 | 46.23% | 0.84 pp |
 | OrganSMNIST | 5 | 3 | 0.1 | **55.96%** | 3.41 pp |
 
-The best observed setting differs by dataset: OrganAMNIST performed best with
-5 rounds, 1 local epoch, and learning rate 0.1; OrganCMNIST and OrganSMNIST
-performed best with 5 rounds, 3 local epochs, and learning rate 0.1. These are
-provisional settings based on three seeds, not proof of global optima.
+The best observed setting differs by dataset: OrganAMNIST performed best with 5 rounds, 1 local epoch, and learning rate 0.1; OrganCMNIST and OrganSMNIST performed best with 5 rounds, 3 local epochs, and learning rate 0.1. These are provisional settings based on three seeds, not proof of global optima.
 
-Increasing local epochs from 1 to 3 at 5 rounds and learning rate 0.1 improved
-mean accuracy on OrganCMNIST (59.34% to 73.48%) and OrganSMNIST (46.23% to
-55.96%), but reduced OrganAMNIST mean accuracy (62.34% to 47.19%) and raised
-its across-seed standard deviation to 12.80 percentage points. Keep
-dataset-specific settings and preserve this variability in later comparisons.
+Increasing local epochs from 1 to 3 at 5 rounds and learning rate 0.1 improved mean accuracy on OrganCMNIST (59.34% to 73.48%) and OrganSMNIST (46.23% to 55.96%), but reduced OrganAMNIST mean accuracy (62.34% to 47.19%) and raised its across-seed standard deviation to 12.80 percentage points. Keep dataset-specific settings and preserve this variability in later comparisons.
 
 ## Observations
-- The original 3-round, 1-epoch, 0.001 baseline reached a mean final accuracy
-  of 18.52% on OrganAMNIST, 19.86% on OrganCMNIST, and 23.53% on OrganSMNIST.
-- All recorded parameter-sweep runs completed with 20 client results per
-  round and no recorded client failures.
+- The original 3-round, 1-epoch, 0.001 baseline reached a mean final accuracy of 18.52% on OrganAMNIST, 19.86% on OrganCMNIST, and 23.53% on OrganSMNIST.
+- All recorded parameter-sweep runs completed with 20 client results per round and no recorded client failures.
 - Evaluation loss decreased across rounds in the original OrganAMNIST baseline.
-- Best observed settings in this sweep: OrganAMNIST at 5 rounds, 1 local epoch,
-  learning rate 0.1 (62.34%); OrganCMNIST at 5 rounds, 3 local epochs, learning
-  rate 0.1 (73.48%); OrganSMNIST at 5 rounds, 3 local epochs, learning rate 0.1
-  (55.96%).
-- Accuracy is not the only useful metric. Track per-class metrics and a
-  confusion matrix in subsequent experiments, especially when comparing
-  different client distributions or poisoned data.
+- Best observed settings in this sweep: OrganAMNIST at 5 rounds, 1 local epoch, learning rate 0.1 (62.34%); OrganCMNIST at 5 rounds, 3 local epochs, learning rate 0.1 (73.48%); OrganSMNIST at 5 rounds, 3 local epochs, learning rate 0.1 (55.96%).
+- Accuracy is not the only useful metric. Track per-class metrics and a confusion matrix in subsequent experiments, especially when comparing different client distributions or poisoned data.
 
 ## Next Steps
-- Establish clean baselines using the realistic client data distribution,
-  starting with the best observed dataset-specific settings above. Keep the
-  seeds, client count, model, and evaluation protocol fixed for comparability.
-- Record accuracy, evaluation loss, per-class metrics, and confusion matrices
-  for each clean run.
-- Run poisoned-data experiments against those clean controls, changing the
-  poisoning condition while holding the training configuration and seeds fixed.
-- Establish a clean baseline separately for each new dataset; do not assume
-  the Organ dataset settings transfer unchanged.
-- Defer more combinations in the current parameter grid unless a later result
-  indicates a specific tuning question. The current sweep is sufficient to
-  proceed to realistic-distribution and poisoning experiments, but not to claim
-  that the selected settings are universally optimal.
+- Establish clean baselines using the realistic client data distribution, starting with the best observed dataset-specific settings above. Keep the seeds, client count, model, and evaluation protocol fixed for comparability.
+- Record accuracy, evaluation loss, per-class metrics, and confusion matrices for each clean run.
+- Run poisoned-data experiments against those clean controls, changing the poisoning condition while holding the training configuration and seeds fixed.
+- Establish a clean baseline separately for each new dataset; do not assume the Organ dataset settings transfer unchanged.
+- Defer more combinations in the current parameter grid unless a later result indicates a specific tuning question. The current sweep is sufficient to proceed to realistic-distribution and poisoning experiments, but not to claim that the selected settings are universally optimal.

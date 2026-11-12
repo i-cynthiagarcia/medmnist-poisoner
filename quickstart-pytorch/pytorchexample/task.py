@@ -113,13 +113,15 @@ def load_data(partition_id: int, num_partitions: int, batch_size: int, seed: int
     return trainloader, testloader
 
 
-def load_centralized_dataset():
-    """Load the currently selected official MedMNIST test dataset."""
+def load_centralized_dataset(split: str):
+    """Load a centralized validation or test split."""
+    if split not in {"val", "test"}:
+        raise ValueError(f"Unsupported centralized dataset split: {split}")
 
-    test_dataset = get_dataset("test")
+    dataset = get_dataset(split)
 
     return DataLoader(
-        test_dataset,
+        dataset,
         batch_size=128,
         shuffle=False,
     )
