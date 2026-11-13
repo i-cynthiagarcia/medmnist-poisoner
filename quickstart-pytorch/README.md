@@ -10,40 +10,50 @@ This introductory example to Flower uses PyTorch, but deep knowledge of PyTorch 
 
 ## Set up the project
 
-### Fetch the app
+The dependencies and Python version range are declared in `pyproject.toml`;
+there is no separate `requirements.txt` to maintain. This project requires
+Python `>=3.10,<3.14`; Python 3.12 and 3.13 meet this requirement, while Python
+3.14 is not currently supported. From the `quickstart-pytorch/` directory,
+create and activate a virtual environment with a supported interpreter, then
+install the project and its dependencies in editable mode. The
+`flwr[simulation]` dependency provides the `flwr` command used below.
+The project-local `.gitignore` excludes `.venv/` from Flower app bundles.
 
-Install Flower:
-
-```shell
-pip install flwr
-```
-
-Fetch the app:
-
-```shell
-flwr new @flwrlabs/quickstart-pytorch
-```
-
-This will create a new directory called `quickstart-pytorch` with the following structure:
-
-```shell
-quickstart-pytorch
-├── pytorchexample
-│   ├── __init__.py
-│   ├── client_app.py   # Defines your ClientApp
-│   ├── server_app.py   # Defines your ServerApp
-│   └── task.py         # Defines your model, training and data loading
-├── pyproject.toml      # Project metadata like dependencies and configs
-└── README.md
-```
-
-### Install dependencies and project
-
-Install the dependencies defined in `pyproject.toml` as well as the `pytorchexample` package.
+Linux/macOS:
 
 ```bash
-pip install -e .
+python3.12 -m venv .venv
+source .venv/bin/activate
+python --version
+python -m pip install --upgrade pip
+python -m pip install -e .
 ```
+
+On Debian/Ubuntu, if environment creation reports that `ensurepip` is not
+available, install the matching venv package first:
+
+```bash
+sudo apt update
+sudo apt install python3.12-venv
+```
+
+Then rerun the `python3.12 -m venv .venv` command.
+
+Windows PowerShell:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python --version
+python -m pip install --upgrade pip
+python -m pip install -e .
+```
+
+If you already created a virtual environment, check its version with
+`python --version`. If it is Python 3.14, create a new environment with Python
+3.12 or 3.13 rather than trying to reuse it. Run
+`python -m pip install -e .` from `quickstart-pytorch/`, and use the same
+activated environment in the terminal where you run Flower.
 
 ## Run the project
 
@@ -100,12 +110,45 @@ done
 
 The loop syntax works in Bash and generally in zsh. It stops or continues between separate Flower commands. Each command should be recorded as a separate JSON result using its seed and run ID.
 
+To rerun the recorded parameter sweep using validation metrics, use the
+reusable Bash script from the repository root:
+
+```bash
+bash quickstart-pytorch/run_validation_sweep.sh
+```
+
+By default, it runs the seven recorded settings for all three Organ datasets
+with seeds 42, 43, 44, 45, and 46 (105 runs). To run one dataset at a time,
+pass its name, for example
+`bash quickstart-pytorch/run_validation_sweep.sh organcmnist`. Set `SEEDS` to
+override the seed list, for example
+`SEEDS="42 43 44" bash quickstart-pytorch/run_validation_sweep.sh` for a 63-run
+three-seed sweep. The output roots default to `results/validation-v2/` and
+`models/validation-v2/`; set `RESULTS_DIR` and `MODELS_DIR` to use different
+roots. The script checks for existing outputs before starting and refuses to
+overwrite them.
+The completed five-seed results and the clean training settings selected for
+follow-up comparisons are documented in
+[baseline_results.md](baseline_results.md).
+
 The server evaluates on the centralized validation split at initialization and
 after each round. Test-set evaluation is disabled by default while selecting
 training settings. Once the protocol is fixed, set `evaluate-test=true` to
 evaluate the final model once on the official test split; those metrics are
 recorded separately from per-round validation metrics. Do not use test metrics
 to select training settings.
+
+By default, validation-run JSON files are saved under
+`results/validation-v2/`, and model checkpoints under `models/validation-v2/`.
+For a final-test run, use separate output paths to preserve the validation-only
+records, for example:
+
+```bash
+flwr run . \
+  --federation-config "num-supernodes=20" \
+  --run-config "dataset=\"organamnist\" seed=42 evaluate-test=true results-dir=\"results/final-test-v2\" models-dir=\"models/final-test-v2\"" \
+  --stream
+```
 
 ### Check Client Data Distribution
 

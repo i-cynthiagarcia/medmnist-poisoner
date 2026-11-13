@@ -116,7 +116,7 @@ def save_run_result(
         },
     }
 
-    result_dir = Path("results") / dataset / experiment
+    result_dir = Path(context.run_config["results-dir"]) / dataset / experiment
     result_dir.mkdir(parents=True, exist_ok=True)
     result_path = result_dir / f"seed-{seed}.json"
     result_path.write_text(json.dumps(record, indent=2) + "\n")
@@ -171,13 +171,13 @@ def main(grid: Grid, context: Context) -> None:
         dataset: str = context.run_config["dataset"]
         seed: int = context.run_config["seed"]
         local_epochs: int = context.run_config["local-epochs"]
-        learning_rate: float = context.run_config["learning-rate"]
-        lr_label = f"lr{learning_rate:.3f}".replace(".", "p")
-        model_dir = Path("models") / dataset / "baseline"
-        model_dir.mkdir(parents=True, exist_ok=True)
-        model_path = model_dir / (
-            f"seed-{seed}_rounds-{num_rounds}_epochs-{local_epochs}_{lr_label}.pt"
+        lr_label = f"lr{lr:.3f}".replace(".", "p")
+        experiment = f"baseline_r{num_rounds}_e{local_epochs}_{lr_label}"
+        model_dir = (
+            Path(context.run_config["models-dir"]) / dataset / experiment
         )
+        model_dir.mkdir(parents=True, exist_ok=True)
+        model_path = model_dir / f"seed-{seed}.pt"
         print(f"\nSaving final model to {model_path}...")
         state_dict = result.arrays.to_torch_state_dict()
         torch.save(state_dict, model_path)
