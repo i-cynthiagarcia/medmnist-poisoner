@@ -8,9 +8,7 @@
 - Aggregation: FedAvg
 
 ## Historical Baseline 
-
 The settings below describe the originally reported OrganAMNIST historical baseline. 
-
 - Clients: 20
 - Federated rounds: 3
 - Local epochs: 1
@@ -18,7 +16,6 @@ The settings below describe the originally reported OrganAMNIST historical basel
 - Batch size: 32
 
 ### Historical Results
-
 These are the originally reported results. They are retained separately from the summaries of runs recorded with references below.
 
 The values below came from an earlier run and have not yet been verified against the current seeded implementation.
