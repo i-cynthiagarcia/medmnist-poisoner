@@ -177,7 +177,7 @@ for dataset in "${datasets[@]}"; do
       read -r rounds epochs lr _ <<< "$setting"
       flwr run . \
         --federation-config "num-supernodes=20" \
-        --run-config "dataset=\"$dataset\" seed=$seed num-server-rounds=$rounds local-epochs=$epochs learning-rate=$lr evaluate-test=false generation-id=\"$generation_id\" protocol-id=\"$protocol_id\" execution-id=\"$execution_id\" results-dir=\"$results_root\" models-dir=\"$models_root\"" \
+        --run-config "experiment-type=\"baseline\" dataset=\"$dataset\" seed=$seed num-server-rounds=$rounds local-epochs=$epochs learning-rate=$lr evaluate-test=false generation-id=\"$generation_id\" protocol-id=\"$protocol_id\" execution-id=\"$execution_id\" results-dir=\"$results_root\" models-dir=\"$models_root\"" \
         --stream
       if [[ "$run_centralized" == true ]]; then
         python -m pytorchexample.experiments.baseline.centralized \

@@ -28,8 +28,8 @@ fab-format-version = 1
 flwr-version-target = "1.30.0"
 
 [tool.flwr.app.components]
-serverapp = "pytorchexample.experiments.baseline.server_app:app"
-clientapp = "pytorchexample.experiments.baseline.client_app:app"
+serverapp = "pytorchexample.experiments.shared.server_app:app"
+clientapp = "pytorchexample.experiments.shared.client_app:app"
 
 [tool.flwr.app.config]
 dataset = "organamnist"
@@ -47,6 +47,11 @@ protocol-id = "protocol-v1"
 execution-id = "auto"
 results-dir = "results/baseline"
 models-dir = "models/baseline"
+experiment-type = "baseline"
+poison-num-clients = 0
+poison-fraction = 0.0
+poison-source-class-id = -1
+poison-target-class-id = -1
 
 
 #######################################################################

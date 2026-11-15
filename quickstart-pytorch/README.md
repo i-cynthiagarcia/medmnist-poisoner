@@ -61,6 +61,10 @@ artifacts) and experiment entry points in
 `pytorchexample/experiments/<experiment>/`. The baseline Flower client/server
 apps and centralized runner are grouped in
 `pytorchexample/experiments/baseline/`.
+The label-flipping Flower apps live in
+`pytorchexample/experiments/poisoning/`; reusable Flower handlers are in
+`pytorchexample/experiments/shared/`. The project-level Flower app dispatches
+between baseline and poisoning using the `experiment-type` run-config value.
 
 ## Run the project
 
@@ -232,6 +236,58 @@ checkpoints, run `python recompute_validation_metrics.py --verify` from
 input run records, or `--output-dir <new-directory>` to write updated copies
 without changing the originals. This only re-evaluates final checkpoints; it
 cannot recreate per-round metrics when intermediate checkpoints are absent.
+
+### Run Targeted Label-Flipping Experiments
+
+The label-flipping runner varies the number of poisoned clients and the
+fraction of each poisoned client's source-class training labels changed to the
+target class. It includes a matched zero-poison control for each seed. Client
+IDs are selected uniformly without replacement from the run seed; examples
+are selected deterministically within each selected client's source-class
+partition. Fractions are rounded to the nearest whole training example.
+Validation and test labels are never changed.
+
+First get the class IDs from the installed MedMNIST metadata. This avoids
+assuming a fixed numeric mapping:
+
+```bash
+python -c 'from pytorchexample.shared.data import get_class_names; [print(f"{i}: {name}") for i, name in enumerate(get_class_names("organamnist"))]'
+```
+
+Use the displayed IDs for left femur as the source and right femur as the
+target. The runner checks and prints the resolved names before training:
+
+```bash
+bash run_label_flipping_experiments.sh organamnist "$SOURCE_CLASS_ID" "$TARGET_CLASS_ID"
+```
+
+Set `SOURCE_CLASS_ID` and `TARGET_CLASS_ID` to the IDs printed above.
+
+By default this runs one clean control plus 16 label-flipping settings
+(`1, 2, 4, 8` poisoned clients × `0.1, 0.25, 0.5, 1.0` source-label fractions)
+for each seed `42–46`, using 5 rounds, 1 local epoch, and learning rate 0.1.
+Override the matrix and training settings with environment variables, for
+example:
+
+```bash
+SEEDS="42 43" POISONED_CLIENT_COUNTS="1 4" POISON_FRACTIONS="0.25 1.0" \
+NUM_SERVER_ROUNDS=5 LOCAL_EPOCHS=1 LEARNING_RATE=0.1 \
+bash run_label_flipping_experiments.sh organamnist "$SOURCE_CLASS_ID" "$TARGET_CLASS_ID"
+```
+
+The runner writes into `results/poisoning/` and `models/poisoning/` by default.
+Set `RESULTS_DIR`, `MODELS_DIR`, `GENERATION_ID`, and `PROTOCOL_ID` to change
+the output locations/version. Each run records the selected client IDs,
+source/target class IDs and resolved names, poisoning fraction, and targeted
+source-to-target misclassification rate on validation (and test, if explicitly
+enabled in a final evaluation run). It also records the exact number of
+source-class training examples flipped for each selected client. The targeted
+rate is the fraction of clean source-class evaluation
+images predicted as the target class; overall accuracy and the full confusion
+matrix remain available alongside it. Compare poisoning runs against the
+clean baseline with the same seed, client count, partition, and training
+settings. Treat monotonic increases in targeted error as a hypothesis, not an
+assumption.
 
 The server evaluates on the centralized validation split at initialization and
 after each round. Test-set evaluation is disabled by default while selecting

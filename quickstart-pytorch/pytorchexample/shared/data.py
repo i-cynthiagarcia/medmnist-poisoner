@@ -1,11 +1,12 @@
 """Shared MedMNIST dataset loading and partitioning helpers."""
 
 from collections import Counter
+from collections.abc import Callable
 
 import medmnist
 import torch
 from medmnist import INFO
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader, Dataset, Subset
 from torchvision.transforms import Compose, Normalize, ToTensor
 
 
@@ -142,8 +143,9 @@ def load_data(
     batch_size: int,
     seed: int,
     dataset: str,
+    client_dataset_transform: Callable[[Dataset, int], Dataset] | None = None,
 ):
-    """Load one uniform client partition and the shared validation split."""
+    """Load one uniform client partition and clean shared validation split."""
     train_dataset = get_dataset("train", dataset)
     val_dataset = get_dataset("val", dataset)
 
@@ -154,6 +156,8 @@ def load_data(
         )
     partitions = get_partition_indices(len(train_dataset), num_partitions, seed)
     client_train = Subset(train_dataset, partitions[partition_id])
+    if client_dataset_transform is not None:
+        client_train = client_dataset_transform(client_train, partition_id)
 
     shuffle_generator = torch.Generator().manual_seed(seed + partition_id)
     trainloader = DataLoader(

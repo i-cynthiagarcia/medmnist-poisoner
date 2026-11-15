@@ -12,15 +12,23 @@ from pytorchexample.shared.artifacts import (
     resolve_protocol_id,
     validate_generation_id,
 )
-from pytorchexample.experiments.baseline.server_app import (
+from pytorchexample.experiments.shared.server import (
     save_partition_manifest,
     save_round_checkpoint,
+    targeted_source_to_target_metrics,
 )
 from pytorchexample.shared.metrics import serialize_evaluation_metrics
 from recompute_validation_metrics import metrics_match
 
 
 class ServerOutputTests(unittest.TestCase):
+    def test_targeted_misclassification_rate_uses_source_row_support(self):
+        metrics = {"confusion_matrix": [[4, 3, 1], [1, 6, 0], [0, 2, 5]]}
+
+        targeted = targeted_source_to_target_metrics(metrics, 0, 1)
+
+        self.assertEqual(targeted, {"rate": 3 / 8, "support": 8})
+
     def test_partition_manifest_is_saved_for_run(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             context = Mock()
