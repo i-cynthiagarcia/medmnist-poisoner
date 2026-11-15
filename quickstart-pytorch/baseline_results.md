@@ -73,7 +73,7 @@ The original invalid run-4 records are:
 
 These are the best mean validation-accuracy settings among the seven tested configurations per dataset, not estimates of globally optimal settings. Keep each dataset's configuration fixed across its clean and poisoned runs; do not retune settings per attack condition. The shared validation set informed this selection, so reserve the test split for final evaluation after the protocol is locked.
 
-## Previous Reference: Frozen Clean Baseline (Generation-v2 / Validation-v2)
+## Previous Reference: Generation-v2 / Validation-v2
 
 **Status:** Historical five-seed reference, superseded for current comparisons by the completed Generation-v3 sweep above.
 
