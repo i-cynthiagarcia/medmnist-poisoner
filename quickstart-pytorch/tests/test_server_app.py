@@ -8,6 +8,7 @@ import torch
 from flwr.app import ArrayRecord, MetricRecord
 
 from pytorchexample.shared.artifacts import (
+    resolve_execution_id,
     resolve_protocol_id,
     validate_generation_id,
 )
@@ -57,14 +58,15 @@ class ServerOutputTests(unittest.TestCase):
             }
 
             path = save_partition_manifest(
-                context, manifest, "generation-v3", "protocol_test"
+                context, manifest, "generation-v3", "protocol-v1", "run-1"
             )
 
             self.assertEqual(
                 path,
                 Path(temp_dir)
                 / "generation-v3"
-                / "protocol_test"
+                / "protocol-v1"
+                / "run-1"
                 / "organcmnist"
                 / "baseline_r3_e1_lr0p100"
                 / "partition-seed-42_run-abc123.json",
@@ -74,20 +76,61 @@ class ServerOutputTests(unittest.TestCase):
             )
             with self.assertRaises(FileExistsError):
                 save_partition_manifest(
-                    context, manifest, "generation-v3", "protocol_test"
+                    context,
+                    manifest,
+                    "generation-v3",
+                    "protocol-v1",
+                    "run-1",
                 )
 
-    def test_protocol_id_is_validated_or_generated(self):
-        configured_id = "protocol_20261115T090141Z"
+    def test_protocol_id_is_validated_or_defaulted(self):
+        configured_id = "protocol-v3"
         self.assertEqual(resolve_protocol_id(configured_id), configured_id)
-        self.assertRegex(
-            resolve_protocol_id("auto"),
-            r"^protocol_\d{8}T\d{6}Z$",
-        )
+        self.assertEqual(resolve_protocol_id("auto"), "protocol-v1")
         with self.assertRaises(ValueError):
             resolve_protocol_id("../protocol-escape")
         with self.assertRaises(ValueError):
             resolve_protocol_id("protocol_custom")
+
+    def test_execution_id_auto_advances_across_result_and_model_roots(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            results_root = Path(temp_dir) / "results"
+            models_root = Path(temp_dir) / "models"
+            (results_root / "generation-v3" / "protocol-v1" / "run-1").mkdir(
+                parents=True
+            )
+            (models_root / "generation-v3" / "protocol-v1" / "run-3").mkdir(
+                parents=True
+            )
+
+            self.assertEqual(
+                resolve_execution_id(
+                    "auto",
+                    results_root,
+                    models_root,
+                    "generation-v3",
+                    "protocol-v1",
+                ),
+                "run-4",
+            )
+            self.assertEqual(
+                resolve_execution_id(
+                    "run-7",
+                    results_root,
+                    models_root,
+                    "generation-v3",
+                    "protocol-v1",
+                ),
+                "run-7",
+            )
+            with self.assertRaises(ValueError):
+                resolve_execution_id(
+                    "../run-escape",
+                    results_root,
+                    models_root,
+                    "generation-v3",
+                    "protocol-v1",
+                )
 
     def test_generation_id_must_follow_versioned_directory_format(self):
         self.assertEqual(validate_generation_id("generation-v3"), "generation-v3")
@@ -141,14 +184,20 @@ class ServerOutputTests(unittest.TestCase):
             arrays = ArrayRecord({"weight": torch.tensor([1.0])})
 
             checkpoint_path = save_round_checkpoint(
-                context, arrays, 2, "generation-v3", "protocol_test"
+                context,
+                arrays,
+                2,
+                "generation-v3",
+                "protocol-v1",
+                "run-1",
             )
 
             self.assertEqual(
                 checkpoint_path,
                 Path(temp_dir)
                 / "generation-v3"
-                / "protocol_test"
+                / "protocol-v1"
+                / "run-1"
                 / "organamnist"
                 / "baseline_r3_e1_lr0p100"
                 / "checkpoints"
@@ -172,12 +221,22 @@ class ServerOutputTests(unittest.TestCase):
             }
             arrays = ArrayRecord({"weight": torch.tensor([1.0])})
             checkpoint_path = save_round_checkpoint(
-                context, arrays, 2, "generation-v3", "protocol_test"
+                context,
+                arrays,
+                2,
+                "generation-v3",
+                "protocol-v1",
+                "run-1",
             )
 
             with self.assertRaises(FileExistsError):
                 save_round_checkpoint(
-                    context, arrays, 2, "generation-v3", "protocol_test"
+                    context,
+                    arrays,
+                    2,
+                    "generation-v3",
+                    "protocol-v1",
+                    "run-1",
                 )
 
             saved_state = torch.load(checkpoint_path, weights_only=True)

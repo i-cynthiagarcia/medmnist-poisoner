@@ -9,6 +9,7 @@ from flwr.app import MetricRecord
 from torch.utils.data import DataLoader
 
 from pytorchexample.shared.artifacts import (
+    resolve_execution_id,
     resolve_protocol_id,
     run_artifact_stem,
     validate_generation_id,
@@ -59,7 +60,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--learning-rate", type=float, default=0.001)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--generation-id", default="generation-v3")
-    parser.add_argument("--protocol-id", default="auto")
+    parser.add_argument("--protocol-id", default="protocol-v1")
+    parser.add_argument("--execution-id", default="auto")
     parser.add_argument("--results-dir", type=Path, default=Path("results/baseline"))
     parser.add_argument("--models-dir", type=Path, default=Path("models/baseline"))
     parser.add_argument(
@@ -98,6 +100,13 @@ def main() -> None:
     args = parse_args()
     generation_id = validate_generation_id(args.generation_id)
     protocol_id = resolve_protocol_id(args.protocol_id)
+    execution_id = resolve_execution_id(
+        args.execution_id,
+        args.results_dir,
+        args.models_dir,
+        generation_id,
+        protocol_id,
+    )
     run_id = "centralized"
     artifact_stem = run_artifact_stem(args.seed, run_id)
     experiment = experiment_name(
@@ -107,6 +116,7 @@ def main() -> None:
         args.results_dir
         / generation_id
         / protocol_id
+        / execution_id
         / args.dataset
         / experiment
     )
@@ -114,6 +124,7 @@ def main() -> None:
         args.models_dir
         / generation_id
         / protocol_id
+        / execution_id
         / args.dataset
         / experiment
     )
@@ -221,6 +232,7 @@ def main() -> None:
         "run_id": run_id,
         "generation_id": generation_id,
         "protocol_id": protocol_id,
+        "execution_id": execution_id,
         "dataset": args.dataset,
         "experiment": experiment,
         "status": "completed",

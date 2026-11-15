@@ -11,6 +11,7 @@ from flwr.serverapp.strategy import FedAvg
 from pytorchexample.shared.config import require_config_string
 from pytorchexample.shared.metrics import json_value, serialize_evaluation_metrics
 from pytorchexample.shared.artifacts import (
+    resolve_execution_id,
     resolve_protocol_id,
     run_artifact_stem,
     validate_generation_id,
@@ -63,6 +64,7 @@ def ensure_run_outputs_unused(
     experiment: str,
     generation_id: str,
     protocol_id: str,
+    execution_id: str,
 ) -> None:
     """Fail before training if any output for this run ID already exists."""
     dataset = require_config_string(context.run_config["dataset"], "dataset")
@@ -73,6 +75,7 @@ def ensure_run_outputs_unused(
         Path(context.run_config["results-dir"])
         / generation_id
         / protocol_id
+        / execution_id
         / dataset
         / experiment
     )
@@ -80,6 +83,7 @@ def ensure_run_outputs_unused(
         Path(context.run_config["models-dir"])
         / generation_id
         / protocol_id
+        / execution_id
         / dataset
         / experiment
     )
@@ -103,6 +107,7 @@ def save_partition_manifest(
     manifest: dict,
     generation_id: str,
     protocol_id: str,
+    execution_id: str,
 ) -> Path:
     """Save verified client partition sizes and class counts before training."""
     dataset = require_config_string(context.run_config["dataset"], "dataset")
@@ -112,6 +117,7 @@ def save_partition_manifest(
         Path(context.run_config["results-dir"])
         / generation_id
         / protocol_id
+        / execution_id
         / dataset
         / experiment_name(
             context.run_config["num-server-rounds"],
@@ -130,6 +136,7 @@ def save_partition_manifest(
         "run_id": run_id,
         "generation_id": generation_id,
         "protocol_id": protocol_id,
+        "execution_id": execution_id,
         **manifest,
     }
     result_dir.mkdir(parents=True, exist_ok=True)
@@ -143,6 +150,7 @@ def save_round_checkpoint(
     server_round: int,
     generation_id: str,
     protocol_id: str,
+    execution_id: str,
 ) -> Path:
     """Save aggregated global weights for one completed server round."""
     dataset = require_config_string(context.run_config["dataset"], "dataset")
@@ -157,6 +165,7 @@ def save_round_checkpoint(
         Path(context.run_config["models-dir"])
         / generation_id
         / protocol_id
+        / execution_id
         / dataset
         / experiment
         / "checkpoints"
@@ -182,6 +191,7 @@ def save_run_result(
     partition_manifest_path: Path,
     generation_id: str,
     protocol_id: str,
+    execution_id: str,
 ) -> Path:
     """Save federated aggregate and training metrics for one Flower run."""
     dataset = require_config_string(context.run_config["dataset"], "dataset")
@@ -196,6 +206,7 @@ def save_run_result(
         Path(context.run_config["results-dir"])
         / generation_id
         / protocol_id
+        / execution_id
         / dataset
         / experiment
     )
@@ -204,6 +215,7 @@ def save_run_result(
         Path(context.run_config["models-dir"])
         / generation_id
         / protocol_id
+        / execution_id
         / dataset
         / experiment
         / f"{artifact_stem}.pt"
@@ -278,6 +290,7 @@ def save_run_result(
         "run_id": context.run_id,
         "generation_id": generation_id,
         "protocol_id": protocol_id,
+        "execution_id": execution_id,
         "dataset": dataset,
         "experiment": experiment,
         "status": "completed" if valid_run else "completed_with_failures",
@@ -352,13 +365,22 @@ def main(grid: Grid, context: Context) -> None:
         context.run_config["generation-id"]
     )
     protocol_id = resolve_protocol_id(context.run_config["protocol-id"])
-    ensure_run_outputs_unused(context, experiment, generation_id, protocol_id)
+    execution_id = resolve_execution_id(
+        context.run_config["execution-id"],
+        context.run_config["results-dir"],
+        context.run_config["models-dir"],
+        generation_id,
+        protocol_id,
+    )
+    ensure_run_outputs_unused(
+        context, experiment, generation_id, protocol_id, execution_id
+    )
     set_seed(seed)
     partition_manifest = build_partition_manifest(
         get_dataset("train", dataset), dataset, num_clients, seed
     )
     partition_manifest_path = save_partition_manifest(
-        context, partition_manifest, generation_id, protocol_id
+        context, partition_manifest, generation_id, protocol_id, execution_id
     )
 
     # Load global model
@@ -378,7 +400,12 @@ def main(grid: Grid, context: Context) -> None:
     def evaluate_round(server_round: int, arrays: ArrayRecord) -> MetricRecord:
         if server_round > 0 and context.run_config["save-model"]:
             round_checkpoint_paths[server_round] = save_round_checkpoint(
-                context, arrays, server_round, generation_id, protocol_id
+                context,
+                arrays,
+                server_round,
+                generation_id,
+                protocol_id,
+                execution_id,
             )
         return evaluate_arrays(arrays, "val", dataset)
 
@@ -405,6 +432,7 @@ def main(grid: Grid, context: Context) -> None:
         partition_manifest_path,
         generation_id,
         protocol_id,
+        execution_id,
     )
     print(f"\nSaving run results to {result_path}...")
 
@@ -413,6 +441,7 @@ def main(grid: Grid, context: Context) -> None:
             Path(context.run_config["models-dir"])
             / generation_id
             / protocol_id
+            / execution_id
             / dataset
             / experiment
         )

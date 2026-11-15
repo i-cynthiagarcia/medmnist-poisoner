@@ -9,7 +9,7 @@
 
 **Use:** The `validation_final_recomputed` records provide corrected final-round validation metrics. Treat the original per-round records as historical output, and do not treat this post-hoc evaluation as a new training sweep.
 
-All 105 saved final model weights were reevaluated on the centralized validation split with per-image cross-entropy, per-class precision/recall/F1/support, and confusion matrices. These metrics are added to each run's JSON under `metrics.validation_final_recomputed`; the stored final-round accuracies match the original records exactly. The original per-round loss values still equally weight batch means, and the original client training metrics are unchanged. Since no intermediate model checkpoints were saved, corrected per-round metrics require rerunning training. Future runs are grouped under a result category and `generation-vN`; a single UTC `protocol_YYYYMMDDTHHMMSSZ` directory identifies each sweep. The corrected baseline sweep will use `results/baseline/generation-v3/` and `models/baseline/generation-v3/` without changing these Generation-v2 records.
+All 105 saved final model weights were reevaluated on the centralized validation split with per-image cross-entropy, per-class precision/recall/F1/support, and confusion matrices. These metrics are added to each run's JSON under `metrics.validation_final_recomputed`; the stored final-round accuracies match the original records exactly. The original per-round loss values still equally weight batch means, and the original client training metrics are unchanged. Since no intermediate model checkpoints were saved, corrected per-round metrics require rerunning training. Future runs are grouped under a result category and `generation-vN`; a `protocol-vN` identifies the protocol structure, while `run-N` identifies an execution of that protocol. The corrected baseline sweep will use `results/baseline/generation-v3/protocol-v1/run-N/` and `models/baseline/generation-v3/protocol-v1/run-N/` without changing these Generation-v2 records.
 
 ### Frozen training and evaluation protocol
 
@@ -172,7 +172,7 @@ Increasing local epochs from 1 to 3 at 5 rounds and learning rate 0.1 improved m
 - Accuracy is not the only useful metric. Track per-class metrics and a confusion matrix in subsequent experiments, especially when comparing different client distributions or poisoned data.
 
 ## Next Steps
-- Rerun the sweep with the corrected per-image loss and expanded per-round outputs under `baseline/generation-v3/protocol_<timestamp>`.
+- Rerun the sweep with the corrected per-image loss and expanded per-round outputs under `baseline/generation-v3/protocol-v1/run-N`.
 - Reconfirm the dataset settings from that protocol before using them as clean controls for poisoning experiments.
 - Define one poisoning method and its parameters precisely, then change one poisoning factor at a time while holding the clean training setup, seeds, and client partitions fixed.
 - Compare poisoned runs to their matching clean runs by seed; record accuracy and loss, and add per-class metrics/confusion matrices or attack success rate when relevant.

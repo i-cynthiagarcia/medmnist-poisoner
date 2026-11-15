@@ -3,16 +3,18 @@
 Results are grouped by experiment category, then by generation:
 
 ```text
-results/<category>/generation-vN/protocol_YYYYMMDDTHHMMSSZ/<dataset>/<experiment>/
+results/<category>/generation-vN/protocol-vN/run-N/<dataset>/<experiment>/
 ```
 
 The supported categories are `baseline`, `poisoning`, and `defense`.
 Generation numbers describe successive eras within a category; they do not
-assert that every result in a generation is directly comparable. Each
-`protocol_<timestamp>` is one execution or sweep, with its UTC start time
-shared across all runs in that invocation. Run JSON names also include the
-seed and Flower run ID. Model checkpoints use the matching layout under
-`models/`.
+assert that every result in a generation is directly comparable. `protocol-vN`
+identifies a protocol structure, and `run-N` identifies one execution of that
+protocol. Reuse the protocol version for reruns with the same structure and
+advance the run number; use a new protocol version when the structure changes.
+Migrated timestamp-based records preserve their former ID in
+`original_protocol_id`. Run JSON names also include the seed and Flower run
+ID. Model checkpoints use the matching layout under `models/`.
 
 ## Baseline generations
 
@@ -27,9 +29,11 @@ seed and Flower run ID. Model checkpoints use the matching layout under
   [baseline_results.md](../baseline_results.md) for status and interpretation.
 - **generation-v3** — the next corrected baseline era. The default script mode
   records one-round runs for a quick check; use `--full-sweep` for the
-  seven-setting, five-seed, three-dataset baseline matrix. The full sweep will
-  record per-image losses, per-round validation metrics, confusion matrices,
-  plots, and global checkpoints. No full sweep has been run yet.
+  seven-setting, five-seed, three-dataset baseline matrix, or
+  `--selected-settings` to reproduce the current candidate controls across
+  five seeds. Both modes record per-image losses, per-round validation
+  metrics, confusion matrices, plots, and global checkpoints. No full sweep
+  has been run yet.
 
 Generation numbers are local to each category. For example, a future
 `poisoning/generation-v0` would be the first poisoning-results era, not the

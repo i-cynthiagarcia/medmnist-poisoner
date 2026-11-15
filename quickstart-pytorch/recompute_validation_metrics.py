@@ -67,6 +67,9 @@ def recompute_final_metrics(
         protocol_id = record.get("protocol_id")
         if protocol_id is not None:
             model_dir /= protocol_id
+        execution_id = record.get("execution_id")
+        if execution_id is not None:
+            model_dir /= execution_id
         model_dir = model_dir / dataset / experiment
         run_id = record.get("run_id")
         model_path = (

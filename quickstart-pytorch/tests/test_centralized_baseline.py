@@ -49,7 +49,9 @@ class CentralizedBaselineTests(unittest.TestCase):
                 "--generation-id",
                 "generation-v3",
                 "--protocol-id",
-                "protocol_20261115T103000Z",
+                "protocol-v1",
+                "--execution-id",
+                "run-1",
                 "--results-dir",
                 str(results_dir),
                 "--models-dir",
@@ -77,7 +79,8 @@ class CentralizedBaselineTests(unittest.TestCase):
             result_path = (
                 results_dir
                 / "generation-v3"
-                / "protocol_20261115T103000Z"
+                / "protocol-v1"
+                / "run-1"
                 / "organamnist"
                 / experiment
                 / f"{stem}.json"
@@ -85,7 +88,8 @@ class CentralizedBaselineTests(unittest.TestCase):
             model_path = (
                 models_dir
                 / "generation-v3"
-                / "protocol_20261115T103000Z"
+                / "protocol-v1"
+                / "run-1"
                 / "organamnist"
                 / experiment
                 / f"{stem}.pt"
@@ -98,6 +102,8 @@ class CentralizedBaselineTests(unittest.TestCase):
             self.assertIsNone(record["aggregation"])
             self.assertEqual(record["configuration"]["training_examples"], 2)
             self.assertEqual(record["configuration"]["epochs"], 1)
+            self.assertEqual(record["protocol_id"], "protocol-v1")
+            self.assertEqual(record["execution_id"], "run-1")
             self.assertEqual(set(record["metrics"]["validation_by_round"]), {"0", "1"})
 
 

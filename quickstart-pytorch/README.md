@@ -139,6 +139,21 @@ dataset, append its name, for example
 Set `SEEDS` to override the seed list in either mode.
 With `--centralized`, the full matrix also runs 105 centralized controls.
 
+To reproduce the current candidate control settings across seeds 42–46, use
+`--selected-settings`:
+
+```bash
+bash quickstart-pytorch/run_baseline_experiments.sh --selected-settings
+```
+
+This runs 15 federated experiments: OrganAMNIST uses 5 rounds, 1 local epoch,
+and learning rate 0.1; OrganCMNIST and OrganSMNIST use 5 rounds, 3 local
+epochs, and learning rate 0.1. Add `--centralized` to run a matching set of
+centralized controls. These are the current candidate settings in
+[baseline_results.md](baseline_results.md); update the script's selected
+settings when the final controls are confirmed. `SEEDS` and dataset arguments
+can also be used to select a subset.
+
 By default, the script runs only federated training: each client model trains
 on its uniform partition of the MedMNIST `train` split, and FedAvg produces
 the federated aggregate model. Add `--centralized` to also train a separate
@@ -171,23 +186,26 @@ python -m pytorchexample.experiments.baseline.centralized \
 Per-round centralized metrics use the `val` split; test-set evaluation is
 disabled by default.
 
-Each invocation creates one UTC `protocol_YYYYMMDDTHHMMSSZ` ID shared by its
-runs. The default generation is `generation-v3`; set `GENERATION_ID` to select
-another `generation-vN`. Results are organized by category, generation, and
-sweep:
-`results/<category>/generation-vN/protocol_<timestamp>/...`. The supported
+Each invocation shares a protocol version and execution ID across its runs.
+The default protocol version is `protocol-v1`; it identifies the protocol
+structure, while `run-1`, `run-2`, and so on distinguish executions of that
+same structure. The default generation is `generation-v3`; set `GENERATION_ID`
+to select another `generation-vN`. Results are organized by category,
+generation, protocol, and execution:
+`results/<category>/generation-vN/protocol-vN/run-N/...`. The supported
 categories are `baseline`, `poisoning`, and `defense`; model outputs mirror
 that layout under `models/`. The default baseline sweep writes beneath
-`results/baseline/generation-v3/protocol_<timestamp>/` and
-`models/baseline/generation-v3/protocol_<timestamp>/`. Set `RESULTS_DIR` and
-`MODELS_DIR` to choose different category roots. A failed or partial sweep
-keeps its protocol directory; a later invocation creates a new timestamp
-rather than replacing those outputs. Individual files also include the Flower
-run ID.
+`results/baseline/generation-v3/protocol-v1/run-N/` and
+`models/baseline/generation-v3/protocol-v1/run-N/`. The runner automatically
+chooses the next run number for that protocol, or you can set `PROTOCOL_ID` and
+`EXECUTION_ID` to select them explicitly. Set `RESULTS_DIR` and `MODELS_DIR` to
+choose different category roots. A failed or partial execution keeps its
+directory; later executions get a new run number rather than replacing those
+outputs. Individual files also include the Flower run ID.
 Each run records per-round validation loss and accuracy, per-class precision,
 recall, F1, support, and a confusion matrix (rows are true classes; columns are
 predicted classes). Checkpoints for each aggregated server round are saved under
-`models/baseline/generation-v3/protocol_<timestamp>/<dataset>/<experiment>/checkpoints/seed-<seed>_run-<run-id>/`.
+`models/baseline/generation-v3/protocol-v1/run-N/<dataset>/<experiment>/checkpoints/seed-<seed>_run-<run-id>/`.
 Before training, each run verifies that client partitions are disjoint and
 assign every training example exactly once. It saves a
 `partition-seed-<seed>_run-<run-id>.json` manifest beside the run result with
@@ -222,15 +240,16 @@ evaluate the final model once on the official test split; those metrics are
 recorded separately from per-round validation metrics. Do not use test metrics
 to select training settings.
 
-By default, a direct Flower run uses `generation-v3` and generates a timestamp
-protocol ID beneath `results/baseline/` and `models/baseline/`. A final-test
-run can use the same generation roots because its new protocol ID keeps it
-separate:
+By default, a direct Flower run uses `generation-v3/protocol-v1` and
+automatically selects the next available `run-N` beneath `results/baseline/`
+and `models/baseline/`. Reuse the protocol version when the protocol structure
+is unchanged; select a new `protocol-vN` when it changes. A final-test run can
+use the same protocol version because its execution ID keeps it separate:
 
 ```bash
 flwr run . \
   --federation-config "num-supernodes=20" \
-  --run-config "dataset=\"organamnist\" seed=42 evaluate-test=true generation-id=\"generation-v3\" protocol-id=\"auto\" results-dir=\"results/baseline\" models-dir=\"models/baseline\"" \
+  --run-config "dataset=\"organamnist\" seed=42 evaluate-test=true generation-id=\"generation-v3\" protocol-id=\"protocol-v1\" execution-id=\"auto\" results-dir=\"results/baseline\" models-dir=\"models/baseline\"" \
   --stream
 ```
 
