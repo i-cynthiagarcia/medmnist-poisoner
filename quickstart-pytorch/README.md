@@ -110,26 +110,55 @@ done
 
 The loop syntax works in Bash and generally in zsh. It stops or continues between separate Flower commands. Each command should be recorded as a separate JSON result using its seed and run ID.
 
-To rerun the recorded parameter sweep using validation metrics, use the
-reusable Bash script from the repository root:
+To rerun the parameter sweep with per-image loss, per-class validation metrics,
+confusion matrices, and per-round global checkpoints, use the reusable Bash
+script from the repository root:
 
 ```bash
 bash quickstart-pytorch/run_validation_sweep.sh
 ```
 
 By default, it runs the seven recorded settings for all three Organ datasets
-with seeds 42, 43, 44, 45, and 46 (105 runs). To run one dataset at a time,
+with seeds 42, 43, 44, 45, and 46 (105 runs). Each invocation creates one
+UTC `protocol_<timestamp>` ID, shared by every run in that sweep. To run one dataset at a time,
 pass its name, for example
 `bash quickstart-pytorch/run_validation_sweep.sh organcmnist`. Set `SEEDS` to
 override the seed list, for example
 `SEEDS="42 43 44" bash quickstart-pytorch/run_validation_sweep.sh` for a 63-run
-three-seed sweep. The output roots default to `results/validation-v2/` and
-`models/validation-v2/`; set `RESULTS_DIR` and `MODELS_DIR` to use different
-roots. The script checks for existing outputs before starting and refuses to
-overwrite them.
-The completed five-seed results and the clean training settings selected for
-follow-up comparisons are documented in
+three-seed sweep. Results are organized under `results/baseline/`,
+`results/poisoning/`, or `results/defense/`; model outputs mirror those
+categories under `models/`. Existing results and model checkpoints are grouped
+under their `baseline/` directories. New baseline sweeps write beneath
+`results/baseline/protocol_<timestamp>/` and
+`models/baseline/protocol_<timestamp>/`. Set `RESULTS_DIR` and `MODELS_DIR` to
+choose different category roots. A failed or partial sweep keeps its protocol
+directory; a later invocation creates a new timestamp rather than replacing
+those outputs. Individual files also include the Flower run ID.
+Each run records per-round validation loss and accuracy, per-class precision,
+recall, F1, support, and a confusion matrix (rows are true classes; columns are
+predicted classes). Checkpoints for each aggregated server round are saved under
+`models/baseline/protocol_<timestamp>/<dataset>/<experiment>/checkpoints/seed-<seed>_run-<run-id>/`.
+Annotated PNG confusion matrices are saved under each results experiment's
+`plots/seed-<seed>_run-<run-id>/` directory, and their paths are included in the
+JSON record. Validation-v2 runs can be plotted from their recomputed final
+validation matrices, without requiring training checkpoints:
+
+```bash
+python render_confusion_matrices.py \
+  --results-dir results/baseline/validation-v2
+```
+
+The renderer refuses to replace existing plots and records their paths in each
+JSON file. Re-running it is safe when all referenced plots are present.
+Update the completed results and selected clean settings in
 [baseline_results.md](baseline_results.md).
+
+To reproducibly recompute final validation metrics from saved final model
+checkpoints, run `python recompute_validation_metrics.py --verify` from
+`quickstart-pytorch/`. Use `--in-place` to add or refresh the metrics in the
+input run records, or `--output-dir <new-directory>` to write updated copies
+without changing the originals. This only re-evaluates final checkpoints; it
+cannot recreate per-round metrics when intermediate checkpoints are absent.
 
 The server evaluates on the centralized validation split at initialization and
 after each round. Test-set evaluation is disabled by default while selecting
@@ -138,15 +167,14 @@ evaluate the final model once on the official test split; those metrics are
 recorded separately from per-round validation metrics. Do not use test metrics
 to select training settings.
 
-By default, validation-run JSON files are saved under
-`results/validation-v2/`, and model checkpoints under `models/validation-v2/`.
-For a final-test run, use separate output paths to preserve the validation-only
-records, for example:
+By default, a direct Flower run uses a generated protocol timestamp beneath
+`results/baseline/` and `models/baseline/`. A final-test run can use the same
+category roots because its new protocol ID keeps it separate:
 
 ```bash
 flwr run . \
   --federation-config "num-supernodes=20" \
-  --run-config "dataset=\"organamnist\" seed=42 evaluate-test=true results-dir=\"results/final-test-v2\" models-dir=\"models/final-test-v2\"" \
+  --run-config "dataset=\"organamnist\" seed=42 evaluate-test=true protocol-id=\"auto\" results-dir=\"results/baseline\" models-dir=\"models/baseline\"" \
   --stream
 ```
 

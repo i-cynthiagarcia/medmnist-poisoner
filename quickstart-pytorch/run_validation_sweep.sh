@@ -35,29 +35,25 @@ settings=(
   "5 3 0.1 0p100"
 )
 
-results_dir="${RESULTS_DIR:-results/validation-v2}"
-models_dir="${MODELS_DIR:-models/validation-v2}"
+results_root="${RESULTS_DIR:-results/baseline}"
+models_root="${MODELS_DIR:-models/baseline}"
+protocol_id="protocol_$(date -u +%Y%m%dT%H%M%SZ)"
+results_dir="$results_root/$protocol_id"
+models_dir="$models_root/$protocol_id"
 
-for dataset in "${datasets[@]}"; do
-  for seed in "${seeds[@]}"; do
-    for setting in "${settings[@]}"; do
-      read -r rounds epochs lr lr_label <<< "$setting"
-      experiment="baseline_r${rounds}_e${epochs}_lr${lr_label}"
-      result_file="$results_dir/$dataset/$experiment/seed-$seed.json"
-      model_file="$models_dir/$dataset/$experiment/seed-$seed.pt"
-      if [[ -e "$result_file" || -e "$model_file" ]]; then
-        echo "Refusing to overwrite an existing output for $dataset, seed $seed, $experiment." >&2
-        echo "Use new RESULTS_DIR and MODELS_DIR values to start another sweep." >&2
-        exit 1
-      fi
-    done
-  done
-done
+if [[ -e "$results_dir" || -e "$models_dir" ]]; then
+  echo "Protocol output path already exists: $protocol_id" >&2
+  echo "Wait for a new timestamp or choose different output roots." >&2
+  exit 1
+fi
 
 if ! command -v flwr >/dev/null 2>&1; then
   echo "Flower CLI 'flwr' is not available in PATH; activate the project environment first." >&2
   exit 127
 fi
+
+mkdir -p "$results_dir" "$models_dir"
+echo "Starting protocol $protocol_id"
 
 for dataset in "${datasets[@]}"; do
   for seed in "${seeds[@]}"; do
@@ -65,7 +61,7 @@ for dataset in "${datasets[@]}"; do
       read -r rounds epochs lr _ <<< "$setting"
       flwr run . \
         --federation-config "num-supernodes=20" \
-        --run-config "dataset=\"$dataset\" seed=$seed num-server-rounds=$rounds local-epochs=$epochs learning-rate=$lr evaluate-test=false results-dir=\"$results_dir\" models-dir=\"$models_dir\"" \
+        --run-config "dataset=\"$dataset\" seed=$seed num-server-rounds=$rounds local-epochs=$epochs learning-rate=$lr evaluate-test=false protocol-id=\"$protocol_id\" results-dir=\"$results_root\" models-dir=\"$models_root\"" \
         --stream
     done
   done
