@@ -2,14 +2,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pytorchexample.visualization import save_confusion_matrix_plot
+from pytorchexample.shared.visualization import save_confusion_matrix_plot
 from render_confusion_matrices import plan_run_plots
 
 
 class ConfusionMatrixPlotTests(unittest.TestCase):
     def test_validation_v2_plan_uses_unique_run_plot_path(self):
         result_path = Path(
-            "results/baseline/validation-v2/organamnist/config/seed-42.json"
+            "results/baseline/generation-v2/organamnist/config/seed-42.json"
         )
         record = {
             "seed": 42,
@@ -38,7 +38,8 @@ class ConfusionMatrixPlotTests(unittest.TestCase):
 
     def test_round_plan_includes_each_round_and_optional_test_matrix(self):
         result_path = Path(
-            "results/baseline/protocol_20261115T090141.123456Z/"
+            "results/baseline/generation-v3/"
+            "protocol_20261115T090141Z/"
             "organamnist/config/run.json"
         )
         record = {

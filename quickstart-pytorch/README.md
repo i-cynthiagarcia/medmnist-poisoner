@@ -55,6 +55,13 @@ If you already created a virtual environment, check its version with
 `python -m pip install -e .` from `quickstart-pytorch/`, and use the same
 activated environment in the terminal where you run Flower.
 
+The Python package keeps reusable components in
+`pytorchexample/shared/` (data, partitions, model, training, metrics, and
+artifacts) and experiment entry points in
+`pytorchexample/experiments/<experiment>/`. The baseline Flower client/server
+apps and centralized runner are grouped in
+`pytorchexample/experiments/baseline/`.
+
 ## Run the project
 
 You can run your Flower project in both _simulation_ and _deployment_ mode without making changes to the code. If you are starting with Flower, we recommend you using the _simulation_ mode as it requires fewer components to be launched manually. By default, `flwr run` will make use of the Simulation Engine.
@@ -110,42 +117,90 @@ done
 
 The loop syntax works in Bash and generally in zsh. It stops or continues between separate Flower commands. Each command should be recorded as a separate JSON result using its seed and run ID.
 
-To rerun the parameter sweep with per-image loss, per-class validation metrics,
-confusion matrices, and per-round global checkpoints, use the reusable Bash
-script from the repository root:
+For a quick one-round run on each Organ dataset (seed 42, one local epoch,
+learning rate 0.001), run the baseline script without flags:
 
 ```bash
-bash quickstart-pytorch/run_validation_sweep.sh
+bash quickstart-pytorch/run_baseline_experiments.sh
 ```
 
-By default, it runs the seven recorded settings for all three Organ datasets
-with seeds 42, 43, 44, 45, and 46 (105 runs). Each invocation creates one
-UTC `protocol_<timestamp>` ID, shared by every run in that sweep. To run one dataset at a time,
-pass its name, for example
-`bash quickstart-pytorch/run_validation_sweep.sh organcmnist`. Set `SEEDS` to
-override the seed list, for example
-`SEEDS="42 43 44" bash quickstart-pytorch/run_validation_sweep.sh` for a 63-run
-three-seed sweep. Results are organized under `results/baseline/`,
-`results/poisoning/`, or `results/defense/`; model outputs mirror those
-categories under `models/`. Existing results and model checkpoints are grouped
-under their `baseline/` directories. New baseline sweeps write beneath
-`results/baseline/protocol_<timestamp>/` and
-`models/baseline/protocol_<timestamp>/`. Set `RESULTS_DIR` and `MODELS_DIR` to
-choose different category roots. A failed or partial sweep keeps its protocol
-directory; a later invocation creates a new timestamp rather than replacing
-those outputs. Individual files also include the Flower run ID.
+To run the full 105-run matrix across all three datasets, explicitly pass
+`--full-sweep`:
+
+```bash
+bash quickstart-pytorch/run_baseline_experiments.sh --full-sweep
+```
+
+The full matrix is seven settings × five seeds (42–46) × three datasets. Each
+run trains for 3 or 5 federated rounds, so the matrix has 105 Flower runs and
+405 federated training rounds total—not 105 total server rounds. To select a
+dataset, append its name, for example
+`bash quickstart-pytorch/run_baseline_experiments.sh --full-sweep organcmnist`.
+Set `SEEDS` to override the seed list in either mode.
+With `--centralized`, the full matrix also runs 105 centralized controls.
+
+By default, the script runs only federated training: each client model trains
+on its uniform partition of the MedMNIST `train` split, and FedAvg produces
+the federated aggregate model. Add `--centralized` to also train a separate
+centralized control on the complete `train` split for every selected
+dataset, seed, and setting:
+
+```bash
+bash quickstart-pytorch/run_baseline_experiments.sh --centralized
+bash quickstart-pytorch/run_baseline_experiments.sh --full-sweep --centralized
+```
+
+The centralized control matches the federated epoch budget
+(`federated rounds × local epochs`) and evaluates on `val` at initialization
+and after each equivalent round. Test-set evaluation remains disabled. Its
+run record identifies it as `centralized_full_train`; federated records
+identify the server output as `federated_aggregate` and note that client-local
+weights are not persisted. Centralized and federated artifacts have separate
+experiment directories. The centralized runner can also be invoked directly
+from `quickstart-pytorch/`, for example:
+
+```bash
+python -m pytorchexample.experiments.baseline.centralized \
+  --dataset organamnist \
+  --seed 42 \
+  --num-rounds 5 \
+  --local-epochs 1 \
+  --learning-rate 0.1
+```
+
+Per-round centralized metrics use the `val` split; test-set evaluation is
+disabled by default.
+
+Each invocation creates one UTC `protocol_YYYYMMDDTHHMMSSZ` ID shared by its
+runs. The default generation is `generation-v3`; set `GENERATION_ID` to select
+another `generation-vN`. Results are organized by category, generation, and
+sweep:
+`results/<category>/generation-vN/protocol_<timestamp>/...`. The supported
+categories are `baseline`, `poisoning`, and `defense`; model outputs mirror
+that layout under `models/`. The default baseline sweep writes beneath
+`results/baseline/generation-v3/protocol_<timestamp>/` and
+`models/baseline/generation-v3/protocol_<timestamp>/`. Set `RESULTS_DIR` and
+`MODELS_DIR` to choose different category roots. A failed or partial sweep
+keeps its protocol directory; a later invocation creates a new timestamp
+rather than replacing those outputs. Individual files also include the Flower
+run ID.
 Each run records per-round validation loss and accuracy, per-class precision,
 recall, F1, support, and a confusion matrix (rows are true classes; columns are
 predicted classes). Checkpoints for each aggregated server round are saved under
-`models/baseline/protocol_<timestamp>/<dataset>/<experiment>/checkpoints/seed-<seed>_run-<run-id>/`.
+`models/baseline/generation-v3/protocol_<timestamp>/<dataset>/<experiment>/checkpoints/seed-<seed>_run-<run-id>/`.
+Before training, each run verifies that client partitions are disjoint and
+assign every training example exactly once. It saves a
+`partition-seed-<seed>_run-<run-id>.json` manifest beside the run result with
+each client's image count and class counts; the run JSON links to that
+manifest.
 Annotated PNG confusion matrices are saved under each results experiment's
 `plots/seed-<seed>_run-<run-id>/` directory, and their paths are included in the
-JSON record. Validation-v2 runs can be plotted from their recomputed final
+JSON record. Generation-v2 runs can be plotted from their recomputed final
 validation matrices, without requiring training checkpoints:
 
 ```bash
 python render_confusion_matrices.py \
-  --results-dir results/baseline/validation-v2
+  --results-dir results/baseline/generation-v2
 ```
 
 The renderer refuses to replace existing plots and records their paths in each
@@ -167,20 +222,21 @@ evaluate the final model once on the official test split; those metrics are
 recorded separately from per-round validation metrics. Do not use test metrics
 to select training settings.
 
-By default, a direct Flower run uses a generated protocol timestamp beneath
-`results/baseline/` and `models/baseline/`. A final-test run can use the same
-category roots because its new protocol ID keeps it separate:
+By default, a direct Flower run uses `generation-v3` and generates a timestamp
+protocol ID beneath `results/baseline/` and `models/baseline/`. A final-test
+run can use the same generation roots because its new protocol ID keeps it
+separate:
 
 ```bash
 flwr run . \
   --federation-config "num-supernodes=20" \
-  --run-config "dataset=\"organamnist\" seed=42 evaluate-test=true protocol-id=\"auto\" results-dir=\"results/baseline\" models-dir=\"models/baseline\"" \
+  --run-config "dataset=\"organamnist\" seed=42 evaluate-test=true generation-id=\"generation-v3\" protocol-id=\"auto\" results-dir=\"results/baseline\" models-dir=\"models/baseline\"" \
   --stream
 ```
 
 ### Check Client Data Distribution
 
-Use `check_distribution.py` to inspect the uniform client partition independently of a Flower run. It uses the same seeded permutation and interleaved partitioning as `load_data()` in `pytorchexample/task.py`.
+Use `check_distribution.py` to inspect the uniform client partition independently of a Flower run. It uses the same seeded permutation and interleaved partitioning as `load_data()` in `pytorchexample/shared/data.py`.
 
 ```bash
 python check_distribution.py \

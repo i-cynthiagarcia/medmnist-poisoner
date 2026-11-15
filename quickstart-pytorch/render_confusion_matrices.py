@@ -4,8 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
-from pytorchexample.artifacts import run_artifact_stem
-from pytorchexample.visualization import save_confusion_matrix_plot
+from pytorchexample.shared.artifacts import run_artifact_stem
+from pytorchexample.shared.visualization import save_confusion_matrix_plot
 
 
 def plan_run_plots(
@@ -81,10 +81,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--results-dir",
         type=Path,
-        default=Path("results/baseline/validation-v2"),
+        default=Path("results/baseline/generation-v2"),
         help=(
             "Run-result directory "
-            "(default: results/baseline/validation-v2)."
+            "(default: results/baseline/generation-v2)."
         ),
     )
     return parser.parse_args()

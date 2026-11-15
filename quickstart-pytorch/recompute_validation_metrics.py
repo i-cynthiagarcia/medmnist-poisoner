@@ -8,15 +8,16 @@ from pathlib import Path
 import torch
 from flwr.app import MetricRecord
 
-from pytorchexample.artifacts import run_artifact_stem
-from pytorchexample.server_app import serialize_evaluation_metrics
-from pytorchexample.task import (
-    Net,
-    evaluate,
+from pytorchexample.shared.metrics import (
+    serialize_evaluation_metrics,
+)
+from pytorchexample.shared.artifacts import run_artifact_stem
+from pytorchexample.shared.data import (
     get_class_names,
     load_centralized_dataset,
-    set_dataset,
 )
+from pytorchexample.shared.model import Net
+from pytorchexample.shared.training import evaluate
 
 
 def metrics_match(expected, actual, tolerance: float = 1e-9) -> bool:
@@ -61,8 +62,12 @@ def recompute_final_metrics(
         dataset = record["dataset"]
         experiment = record["experiment"]
         seed = record["seed"]
-        protocol_id = record.get("protocol_id", "validation-v2")
-        model_dir = models_dir / protocol_id / dataset / experiment
+        generation_id = record.get("generation_id", "generation-v2")
+        model_dir = models_dir / generation_id
+        protocol_id = record.get("protocol_id")
+        if protocol_id is not None:
+            model_dir /= protocol_id
+        model_dir = model_dir / dataset / experiment
         run_id = record.get("run_id")
         model_path = (
             model_dir / f"{run_artifact_stem(seed, run_id)}.pt"
@@ -76,16 +81,15 @@ def recompute_final_metrics(
         if not model_path.is_file():
             raise FileNotFoundError(f"Missing final checkpoint: {model_path}")
 
-        set_dataset(dataset)
         if dataset not in loaders:
-            loaders[dataset] = load_centralized_dataset("val")
+            loaders[dataset] = load_centralized_dataset("val", dataset)
 
         model = Net()
         state_dict = torch.load(
             model_path, map_location="cpu", weights_only=True
         )
         model.load_state_dict(state_dict)
-        metrics = evaluate(model, loaders[dataset], device)
+        metrics = evaluate(model, loaders[dataset], device, dataset)
         class_names = get_class_names(dataset)
         final_metrics = serialize_evaluation_metrics(
             MetricRecord(metrics), class_names
@@ -115,10 +119,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--results-dir",
         type=Path,
-        default=Path("results/baseline/validation-v2"),
+        default=Path("results/baseline/generation-v2"),
         help=(
             "Input run-record directory "
-            "(default: results/baseline/validation-v2)."
+            "(default: results/baseline/generation-v2)."
         ),
     )
     parser.add_argument(

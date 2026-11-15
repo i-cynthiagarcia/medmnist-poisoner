@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,21 +7,92 @@ from unittest.mock import Mock
 import torch
 from flwr.app import ArrayRecord, MetricRecord
 
-from pytorchexample.artifacts import resolve_protocol_id
-from pytorchexample.server_app import (
-    save_round_checkpoint,
-    serialize_evaluation_metrics,
+from pytorchexample.shared.artifacts import (
+    resolve_protocol_id,
+    validate_generation_id,
 )
+from pytorchexample.experiments.baseline.server_app import (
+    save_partition_manifest,
+    save_round_checkpoint,
+)
+from pytorchexample.shared.metrics import serialize_evaluation_metrics
 from recompute_validation_metrics import metrics_match
 
 
 class ServerOutputTests(unittest.TestCase):
+    def test_partition_manifest_is_saved_for_run(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            context = Mock()
+            context.run_id = "abc123"
+            context.run_config = {
+                "dataset": "organcmnist",
+                "seed": 42,
+                "num-server-rounds": 3,
+                "local-epochs": 1,
+                "learning-rate": 0.1,
+                "results-dir": temp_dir,
+            }
+            manifest = {
+                "dataset": "organcmnist",
+                "seed": 42,
+                "num_clients": 2,
+                "total_training_examples": 5,
+                "verification": {
+                    "partitions_are_disjoint": True,
+                    "all_training_examples_assigned": True,
+                    "each_training_example_assigned_once": True,
+                },
+                "clients": [
+                    {
+                        "partition_id": 0,
+                        "num_images": 3,
+                        "class_counts": {"class-a": 2, "class-b": 1},
+                    },
+                    {
+                        "partition_id": 1,
+                        "num_images": 2,
+                        "class_counts": {"class-a": 1, "class-b": 1},
+                    },
+                ],
+            }
+
+            path = save_partition_manifest(
+                context, manifest, "generation-v3", "protocol_test"
+            )
+
+            self.assertEqual(
+                path,
+                Path(temp_dir)
+                / "generation-v3"
+                / "protocol_test"
+                / "organcmnist"
+                / "baseline_r3_e1_lr0p100"
+                / "partition-seed-42_run-abc123.json",
+            )
+            self.assertEqual(
+                json.loads(path.read_text())["clients"], manifest["clients"]
+            )
+            with self.assertRaises(FileExistsError):
+                save_partition_manifest(
+                    context, manifest, "generation-v3", "protocol_test"
+                )
+
     def test_protocol_id_is_validated_or_generated(self):
-        configured_id = "protocol_20261115T090141.123456Z"
+        configured_id = "protocol_20261115T090141Z"
         self.assertEqual(resolve_protocol_id(configured_id), configured_id)
-        self.assertRegex(resolve_protocol_id("auto"), r"^protocol_[0-9TZ.]+$")
+        self.assertRegex(
+            resolve_protocol_id("auto"),
+            r"^protocol_\d{8}T\d{6}Z$",
+        )
         with self.assertRaises(ValueError):
             resolve_protocol_id("../protocol-escape")
+        with self.assertRaises(ValueError):
+            resolve_protocol_id("protocol_custom")
+
+    def test_generation_id_must_follow_versioned_directory_format(self):
+        self.assertEqual(validate_generation_id("generation-v3"), "generation-v3")
+        with self.assertRaises(ValueError):
+            validate_generation_id("../generation-v3")
 
     def test_metric_verification_detects_changed_values(self):
         expected = {"loss": 0.25, "matrix": [[1, 0], [0, 1]]}
@@ -69,12 +141,13 @@ class ServerOutputTests(unittest.TestCase):
             arrays = ArrayRecord({"weight": torch.tensor([1.0])})
 
             checkpoint_path = save_round_checkpoint(
-                context, arrays, 2, "protocol_test"
+                context, arrays, 2, "generation-v3", "protocol_test"
             )
 
             self.assertEqual(
                 checkpoint_path,
                 Path(temp_dir)
+                / "generation-v3"
                 / "protocol_test"
                 / "organamnist"
                 / "baseline_r3_e1_lr0p100"
@@ -99,11 +172,13 @@ class ServerOutputTests(unittest.TestCase):
             }
             arrays = ArrayRecord({"weight": torch.tensor([1.0])})
             checkpoint_path = save_round_checkpoint(
-                context, arrays, 2, "protocol_test"
+                context, arrays, 2, "generation-v3", "protocol_test"
             )
 
             with self.assertRaises(FileExistsError):
-                save_round_checkpoint(context, arrays, 2, "protocol_test")
+                save_round_checkpoint(
+                    context, arrays, 2, "generation-v3", "protocol_test"
+                )
 
             saved_state = torch.load(checkpoint_path, weights_only=True)
             self.assertTrue(torch.equal(saved_state["weight"], torch.tensor([1.0])))

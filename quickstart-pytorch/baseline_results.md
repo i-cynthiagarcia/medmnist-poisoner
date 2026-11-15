@@ -1,7 +1,7 @@
 
 # Flower Federated Learning Baselines
 
-## Previous Reference: Frozen Clean Baseline (Validation-v2)
+## Previous Reference: Frozen Clean Baseline (Generation-v2 / Validation-v2)
 
 **Status:** Existing five-seed training runs with post-hoc final-checkpoint metrics added; a corrected rerun is still needed for round-by-round outputs.
 
@@ -9,12 +9,12 @@
 
 **Use:** The `validation_final_recomputed` records provide corrected final-round validation metrics. Treat the original per-round records as historical output, and do not treat this post-hoc evaluation as a new training sweep.
 
-All 105 saved final model weights were reevaluated on the centralized validation split with per-image cross-entropy, per-class precision/recall/F1/support, and confusion matrices. These metrics are added to each run's JSON under `metrics.validation_final_recomputed`; the stored final-round accuracies match the original records exactly. The original per-round loss values still equally weight batch means, and the original client training metrics are unchanged. Since no intermediate model checkpoints were saved, corrected per-round metrics require rerunning training. Future runs are grouped under a category and a single UTC `protocol_<timestamp>` directory; the next corrected baseline sweep will be written under `results/baseline/` and `models/baseline/` without changing these Validation-v2 results.
+All 105 saved final model weights were reevaluated on the centralized validation split with per-image cross-entropy, per-class precision/recall/F1/support, and confusion matrices. These metrics are added to each run's JSON under `metrics.validation_final_recomputed`; the stored final-round accuracies match the original records exactly. The original per-round loss values still equally weight batch means, and the original client training metrics are unchanged. Since no intermediate model checkpoints were saved, corrected per-round metrics require rerunning training. Future runs are grouped under a result category and `generation-vN`; a single UTC `protocol_YYYYMMDDTHHMMSSZ` directory identifies each sweep. The corrected baseline sweep will use `results/baseline/generation-v3/` and `models/baseline/generation-v3/` without changing these Generation-v2 records.
 
 ### Frozen training and evaluation protocol
 
 - Datasets: OrganAMNIST, OrganCMNIST, and OrganSMNIST, using MedMNIST 28x28 grayscale images.
-- Model: the existing 11-class CNN in [`pytorchexample/task.py`](pytorchexample/task.py).
+- Model: the existing 11-class CNN in [`pytorchexample/shared/model.py`](pytorchexample/shared/model.py).
 - Framework and aggregation: Flower 1.30.x with FedAvg.
 - Data split: MedMNIST `train` is partitioned uniformly among 20 clients; centralized `val` is used at initialization and after every server round.
 - Partitioning: for each seed, a seeded random permutation of the training indices is interleaved across clients. Client training uses batch size 32 and seeded shuffling.
@@ -22,7 +22,7 @@ All 105 saved final model weights were reevaluated on the centralized validation
 - Seeds: 42, 43, 44, 45, and 46. The global model and data ordering are seeded for each run.
 - Participation: all 20 clients are required to train each round; no client-side evaluation is requested.
 - Test set: evaluation disabled for this sweep. All 105 records have `test_final: null`; test metrics were not used to select the settings.
-- Run integrity: all 105 records completed, had 20 client results in every round, and recorded zero client failures. Run-specific JSON records are in [`results/baseline/validation-v2/`](results/baseline/validation-v2/).
+- Run integrity: all 105 records completed, had 20 client results in every round, and recorded zero client failures. Run-specific JSON records are in [`results/baseline/generation-v2/`](results/baseline/generation-v2/).
 
 ### Complete sweep summary
 
@@ -101,9 +101,9 @@ These are retained for historical context and have not been verified against the
 | 3 | 18.515394% | 0.064951% | 2.352745 | 0.007457 |
 
 Individual records:
-- [seed 42](results/baseline/organamnist/baseline_r3_e1_lr0p001/seed-42.json)
-- [seed 43](results/baseline/organamnist/baseline_r3_e1_lr0p001/seed-43.json)
-- [seed 44](results/baseline/organamnist/baseline_r3_e1_lr0p001/seed-44.json)
+- [seed 42](results/baseline/generation-v1/organamnist/baseline_r3_e1_lr0p001/seed-42.json)
+- [seed 43](results/baseline/generation-v1/organamnist/baseline_r3_e1_lr0p001/seed-43.json)
+- [seed 44](results/baseline/generation-v1/organamnist/baseline_r3_e1_lr0p001/seed-44.json)
 
 #### OrganCMNIST, seeds 42–44
 | Round | Accuracy Mean | Accuracy Std Dev | Loss Mean | Loss Std Dev |
@@ -114,9 +114,9 @@ Individual records:
 | 3 | 19.855566% | 4.293586% | 2.377588 | 0.007500 |
 
 Individual records:
-- [seed 42](results/baseline/organcmnist/baseline_r3_e1_lr0p001/seed-42.json)
-- [seed 43](results/baseline/organcmnist/baseline_r3_e1_lr0p001/seed-43.json)
-- [seed 44](results/baseline/organcmnist/baseline_r3_e1_lr0p001/seed-44.json)
+- [seed 42](results/baseline/generation-v1/organcmnist/baseline_r3_e1_lr0p001/seed-42.json)
+- [seed 43](results/baseline/generation-v1/organcmnist/baseline_r3_e1_lr0p001/seed-43.json)
+- [seed 44](results/baseline/generation-v1/organcmnist/baseline_r3_e1_lr0p001/seed-44.json)
 
 #### OrganSMNIST, seeds 42–44
 | Round | Accuracy Mean | Accuracy Std Dev | Loss Mean | Loss Std Dev |
@@ -127,9 +127,9 @@ Individual records:
 | 3 | 23.526302% | 0.026163% | 2.368260 | 0.012067 |
 
 Individual records:
-- [seed 42](results/baseline/organsmnist/baseline_r3_e1_lr0p001/seed-42.json)
-- [seed 43](results/baseline/organsmnist/baseline_r3_e1_lr0p001/seed-43.json)
-- [seed 44](results/baseline/organsmnist/baseline_r3_e1_lr0p001/seed-44.json)
+- [seed 42](results/baseline/generation-v1/organsmnist/baseline_r3_e1_lr0p001/seed-42.json)
+- [seed 43](results/baseline/generation-v1/organsmnist/baseline_r3_e1_lr0p001/seed-43.json)
+- [seed 44](results/baseline/generation-v1/organsmnist/baseline_r3_e1_lr0p001/seed-44.json)
 
 ## Earlier Expanded Parameter Sweep (Seeds 42, 43, 44)
 
@@ -172,7 +172,7 @@ Increasing local epochs from 1 to 3 at 5 rounds and learning rate 0.1 improved m
 - Accuracy is not the only useful metric. Track per-class metrics and a confusion matrix in subsequent experiments, especially when comparing different client distributions or poisoned data.
 
 ## Next Steps
-- Rerun the sweep with the corrected per-image loss and expanded per-round outputs under a new `protocol_<timestamp>` ID.
+- Rerun the sweep with the corrected per-image loss and expanded per-round outputs under `baseline/generation-v3/protocol_<timestamp>`.
 - Reconfirm the dataset settings from that protocol before using them as clean controls for poisoning experiments.
 - Define one poisoning method and its parameters precisely, then change one poisoning factor at a time while holding the clean training setup, seeds, and client partitions fixed.
 - Compare poisoned runs to their matching clean runs by seed; record accuracy and loss, and add per-class metrics/confusion matrices or attack success rate when relevant.

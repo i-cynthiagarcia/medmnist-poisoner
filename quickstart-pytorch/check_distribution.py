@@ -1,13 +1,11 @@
 
 import argparse
-from collections import Counter
 
-import medmnist
-import torch
-from medmnist import INFO
-
-
-SUPPORTED_DATASETS = {"organamnist", "organcmnist", "organsmnist"}
+from pytorchexample.shared.data import (
+    SUPPORTED_DATASETS,
+    build_partition_manifest,
+    get_dataset,
+)
 
 
 def parse_args():
@@ -34,36 +32,24 @@ def parse_args():
 def main():
     args = parse_args()
 
-    info = INFO[args.dataset]
-    dataset_class = getattr(medmnist, info["python_class"])
-    dataset = dataset_class(
-        split="train",
-        download=True,
-        size=args.size,
+    dataset = get_dataset("train", args.dataset, size=args.size)
+    manifest = build_partition_manifest(
+        dataset, args.dataset, args.num_clients, args.seed
     )
-
-    generator = torch.Generator().manual_seed(args.seed)
-    indices = torch.randperm(len(dataset), generator=generator).tolist()
 
     print(f"Dataset: {args.dataset}")
     print(f"Image size: {args.size}x{args.size}")
-    print(f"Total training images: {len(dataset)}")
+    print(f"Total training images: {manifest['total_training_examples']}")
     print(f"Number of clients: {args.num_clients}")
     print(f"Partition seed: {args.seed}")
+    print("Partition verification: passed (disjoint, complete, exactly once)")
     print()
 
-    num_classes = len(info["label"])
-    for client_id in range(args.num_clients):
-        client_indices = indices[client_id::args.num_clients]
-        labels = [int(dataset.labels[i].item()) for i in client_indices]
-
-        counts = Counter(labels)
-        distribution = [counts.get(class_id, 0) for class_id in range(num_classes)]
-
+    for client in manifest["clients"]:
         print(
-            f"Client {client_id:02d}: "
-            f"{len(client_indices)} images | "
-            f"Class counts: {distribution}"
+            f"Client {client['partition_id']:02d}: "
+            f"{client['num_images']} images | "
+            f"Class counts: {client['class_counts']}"
         )
 
 
