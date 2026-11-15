@@ -32,8 +32,11 @@ ID. Model checkpoints use the matching layout under `models/`.
   seven-setting, five-seed, three-dataset baseline matrix, or
   `--selected-settings` to reproduce the current candidate controls across
   five seeds. Both modes record per-image losses, per-round validation
-  metrics, confusion matrices, plots, and global checkpoints. No full sweep
-  has been run yet.
+  metrics, confusion matrices, plots, and global checkpoints. After a full
+  sweep, run `python summarize_baseline_sweep.py` from `quickstart-pytorch/`
+  to validate its records and print a Markdown summary. Use `--output <path>`
+  to save the report alongside that execution. The summarizer does not modify
+  `baseline_results.md`.
 
 Generation numbers are local to each category. For example, a future
 `poisoning/generation-v0` would be the first poisoning-results era, not the

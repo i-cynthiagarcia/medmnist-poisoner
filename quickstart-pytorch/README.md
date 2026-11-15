@@ -227,8 +227,34 @@ python render_confusion_matrices.py \
 
 The renderer refuses to replace existing plots and records their paths in each
 JSON file. Re-running it is safe when all referenced plots are present.
-Update the completed results and selected clean settings in
-[baseline_results.md](baseline_results.md).
+After the full sweep finishes, validate and summarize its records. By default,
+the Markdown report is printed to the terminal:
+
+```bash
+python summarize_baseline_sweep.py
+```
+
+By default, the summarizer uses the highest `run-N` under
+`results/baseline/generation-v3/protocol-v1/`. It expects a complete sweep, so
+if the newest execution is a targeted rerun, pass `--execution-id run-N` for
+the complete sweep you want to summarize. Pass `--seeds` if the sweep used a
+custom seed list. Save the report under the execution's results directory with
+`--output`:
+
+```bash
+python summarize_baseline_sweep.py \
+  --execution-id run-4 \
+  --output results/baseline/generation-v3/protocol-v1/run-4/baseline_summary.md
+```
+
+The summarizer requires the complete seven-setting matrix across all three
+datasets. It refuses to summarize if federated runs failed, records are
+missing, client failures occurred, or partition manifests did not pass
+verification. If the sweep included `--centralized`, its comparison table is
+generated only when all centralized records have finite metrics; otherwise the
+table is withheld and the affected runs are listed in the report. The script
+prints to stdout or writes the requested report file; it never edits
+`baseline_results.md`.
 
 To reproducibly recompute final validation metrics from saved final model
 checkpoints, run `python recompute_validation_metrics.py --verify` from
