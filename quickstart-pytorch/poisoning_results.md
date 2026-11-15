@@ -74,33 +74,59 @@ All three runs completed five rounds with 20 client results per round and zero
 client failures. The poisoned run's record also includes its confusion matrices,
 plots, checkpoint references, and partition manifest.
 
-## OrganCMNIST and OrganSMNIST: seed-42 trials
+## OrganCMNIST and OrganSMNIST: seeds 42–46
 
-The same one-client, 100%-flip condition was run on both datasets. Their
-selected clean-baseline settings use 3 local epochs (the other settings match
-the OrganAMNIST trial). The kidney class IDs are also 4 → 5 in both datasets.
-Each clean control matched its saved seed-42 federated baseline's per-round
-metrics and partition.
+The same one-client, 100%-flip condition was completed for five seeds on both
+datasets. Their selected clean-baseline settings use 3 local epochs (the other
+settings match the OrganAMNIST trial). The kidney class IDs are 4 → 5 in both
+datasets. Each clean control matches its saved seed-specific federated
+baseline's per-round validation metrics and partition.
 
-| Dataset | Flipped labels | Validation accuracy, clean → attack | Validation loss, clean → attack | kidney-left recall, clean → attack | kidney-left → kidney-right, clean → attack |
-|---------|---------------:|------------------------------------:|-------------------------------:|----------------------------------:|-----------------------------------------:|
-| OrganCMNIST | 52/52 | 89.76% → 90.26% | 0.4381 → 0.4288 | 95.45% → 98.48% | 2.27% (3/132) → 0% (0/132) |
-| OrganSMNIST | 55/55 | 67.50% → 71.78% | 0.9673 → 0.9419 | 82.14% → 24.29% | 2.86% (4/140) → 59.29% (83/140) |
+The table reports each seed's round-5 validation metrics. Source-to-target
+error is the fraction of true kidney-left validation examples predicted as
+kidney-right; each row is paired with its same-seed clean control.
 
-The deterministic replay verified that all 52 OrganCMNIST and all 55
-OrganSMNIST source labels on selected client 2 became kidney-right, with no
-other labels changed. Both controls and attacks completed five rounds with
-20/20 clients and zero failures; test evaluation was disabled.
+| Dataset | Seed | Flipped labels | Accuracy, clean → attack | Loss, clean → attack | kidney-left recall, clean → attack | kidney-left → kidney-right, clean → attack |
+|---------|-----:|---------------:|-------------------------:|--------------------:|-----------------------------------:|-----------------------------------------:|
+| OrganCMNIST | 42 | 52/52 | 89.76% → 90.26% | 0.4381 → 0.4288 | 95.45% → 98.48% | 2.27% (3/132) → 0% (0/132) |
+| OrganCMNIST | 43 | 49/49 | 85.41% → 86.66% | 0.5653 → 0.5449 | 100.00% → 96.21% | 0% (0/132) → 2.27% (3/132) |
+| OrganCMNIST | 44 | 43/43 | 87.58% → 87.25% | 0.5064 → 0.4544 | 97.73% → 93.94% | 0% (0/132) → 3.03% (4/132) |
+| OrganCMNIST | 45 | 41/41 | 86.62% → 87.29% | 0.5059 → 0.5437 | 88.64% → 92.42% | 2.27% (3/132) → 2.27% (3/132) |
+| OrganCMNIST | 46 | 55/55 | 88.67% → 85.28% | 0.4743 → 0.5833 | 92.42% → 90.15% | 4.55% (6/132) → 2.27% (3/132) |
+| OrganSMNIST | 42 | 55/55 | 67.50% → 71.78% | 0.9673 → 0.9419 | 82.14% → 24.29% | 2.86% (4/140) → 59.29% (83/140) |
+| OrganSMNIST | 43 | 66/66 | 67.25% → 70.43% | 1.0183 → 0.8522 | 57.86% → 0% | 30.71% (43/140) → 90.71% (127/140) |
+| OrganSMNIST | 44 | 47/47 | 75.20% → 75.77% | 0.6920 → 0.6579 | 7.14% → 1.43% | 86.43% (121/140) → 93.57% (131/140) |
+| OrganSMNIST | 45 | 60/60 | 69.74% → 70.27% | 0.9386 → 0.8904 | 30.71% → 7.86% | 55.71% (78/140) → 77.14% (108/140) |
+| OrganSMNIST | 46 | 64/64 | 72.72% → 74.92% | 0.7941 → 0.7615 | 12.86% → 2.86% | 70.00% (98/140) → 80.00% (112/140) |
 
-The OrganCMNIST trial did not show an increase in the targeted error rate,
-while the OrganSMNIST trial showed a large increase. Both are one-seed
-observations; the higher overall accuracy in each poisoned run does not
-contradict the class-specific effects and is not evidence of a general benefit.
+Across the five paired seeds, the mean change (attack minus clean) for
+OrganCMNIST was −0.26 percentage points in accuracy, +0.0130 in loss,
+−0.61 pp in kidney-left recall, and +0.15 pp in targeted error rate. The
+targeted-error direction was inconsistent across seeds, so this condition did
+not show a replicated OrganCMNIST attack effect.
+
+For OrganSMNIST, the corresponding mean paired changes were +2.15 pp in
+accuracy, −0.0613 in loss, −30.86 pp in kidney-left recall, and +31.00 pp in
+targeted error rate. Targeted error increased in all five pairs, while
+kidney-left recall decreased in all five. The higher overall accuracy in each
+poisoned run does not contradict these class-specific effects and is not
+evidence of a general benefit. Both findings remain limited to this
+one-client, full-flip condition and these five seeds.
+
+All ten poisoned records and their controls completed five rounds with 20
+results and zero client failures per round; test evaluation was disabled.
+For each seed, the recorded number of flipped labels equals the selected
+client's kidney-left count in its saved partition manifest (240 labels total
+for OrganCMNIST; 292 for OrganSMNIST). The run records do not persist a
+per-example before/after label audit, so the count check does not independently
+replay the tensor transformation.
 
 Run records:
 
-- OrganCMNIST [clean control](results/poisoning/generation-v3/protocol-v1/run-3/organcmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/seed-42_run-17716134690215662785.json) · [poisoned run](results/poisoning/generation-v3/protocol-v1/run-3/organcmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/seed-42_run-13627381287354949253.json)
-- OrganSMNIST [clean control](results/poisoning/generation-v3/protocol-v1/run-4/organsmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/seed-42_run-15574750315785558871.json) · [poisoned run](results/poisoning/generation-v3/protocol-v1/run-4/organsmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/seed-42_run-16040722783643213093.json)
+- OrganCMNIST seed 42: [clean control](results/poisoning/generation-v3/protocol-v1/run-3/organcmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/seed-42_run-17716134690215662785.json) · [poisoned run](results/poisoning/generation-v3/protocol-v1/run-3/organcmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/seed-42_run-13627381287354949253.json)
+- OrganCMNIST seeds 43–46: [clean controls](results/poisoning/generation-v3/protocol-v1/run-5/organcmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/) · [poisoned runs](results/poisoning/generation-v3/protocol-v1/run-5/organcmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/)
+- OrganSMNIST seed 42: [clean control](results/poisoning/generation-v3/protocol-v1/run-4/organsmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/seed-42_run-15574750315785558871.json) · [poisoned run](results/poisoning/generation-v3/protocol-v1/run-4/organsmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/seed-42_run-16040722783643213093.json)
+- OrganSMNIST seeds 43–46: [clean controls](results/poisoning/generation-v3/protocol-v1/run-6/organsmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/) · [poisoned runs](results/poisoning/generation-v3/protocol-v1/run-6/organsmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/)
 
 ## Refinement notes
 
@@ -108,9 +134,6 @@ Run records:
   client count, partition, and training settings.
 - The OrganAMNIST seed-43–46 records are present under poisoning `run-2`;
   validate those before treating the OrganAMNIST effect as replicated.
-- For OrganCMNIST and OrganSMNIST, repeat the fixed 1-client/100%-flip
-  condition with seeds 43–46 before changing the flip fraction or number of
-  poisoned clients.
 - Change one attack factor at a time. Track targeted source-to-target
   misclassification, source-class recall, overall validation metrics, and
   label-transformation counts.
