@@ -38,6 +38,13 @@ ID. Model checkpoints use the matching layout under `models/`.
   to save the report alongside that execution. The summarizer does not modify
   `baseline_results.md`.
 
+## Poisoning results
+
+See [poisoning_results.md](../poisoning_results.md) for the current
+label-flipping trial, verification status, paired clean comparison, and
+refinement protocol. Run-specific JSON records remain the source of truth for
+full metrics and artifact paths.
+
 Generation numbers are local to each category. For example, a future
 `poisoning/generation-v0` would be the first poisoning-results era, not the
 same protocol as `baseline/generation-v0`.

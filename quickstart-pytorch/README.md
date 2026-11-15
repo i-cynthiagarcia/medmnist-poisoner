@@ -280,8 +280,11 @@ assuming a fixed numeric mapping:
 python -c 'from pytorchexample.shared.data import get_class_names; [print(f"{i}: {name}") for i, name in enumerate(get_class_names("organamnist"))]'
 ```
 
-Use the displayed IDs for left femur as the source and right femur as the
-target. The runner checks and prints the resolved names before training:
+Use the displayed IDs for the source and target classes in the experiment. For
+the initial trial recorded in
+[poisoning_results.md](poisoning_results.md), these are kidney-left (4) and
+kidney-right (5). The runner checks and prints the resolved names before
+training:
 
 ```bash
 bash run_label_flipping_experiments.sh organamnist "$SOURCE_CLASS_ID" "$TARGET_CLASS_ID"
