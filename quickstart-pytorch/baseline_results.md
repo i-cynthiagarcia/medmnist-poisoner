@@ -13,10 +13,11 @@
 - Seeds: 42, 43, 44, 45, 46.
 - Configurations: the seven combinations shown in the tables below, for each dataset.
 - Federated training: 20 clients with FedAvg; every client returned a result in every round. All runs completed, passed the recorded validity check, and had zero client failures.
-- Centralized comparisons: found 105 records; 3 contained invalid metrics, so no aggregate table was generated.
+- Run-4 centralized comparisons: found 105 records; three OrganAMNIST seed-42 records at learning rate 0.1 had invalid metrics and are excluded below.
+- Run-5 follow-up: 15 OrganAMNIST centralized runs at learning rate 0.01 (seeds 42-46 across the three affected epoch budgets) completed with finite training losses, validation metrics, and model parameters. They are reported separately because the learning rate differs from the original controls.
 - Partition manifests: all 105 verify disjoint partitions and assignment of every training example exactly once.
 - Metrics: validation accuracy and per-image cross-entropy loss are recorded at initialization and each training round. Test evaluation was disabled; `test_final` is null throughout.
-- Run-specific JSON records and model checkpoints are in `results/baseline/generation-v3/protocol-v1/run-4/` and `models/baseline/generation-v3/protocol-v1/run-4/`.
+- Run-specific JSON records and model checkpoints are in `results/baseline/generation-v3/protocol-v1/run-4/` and `models/baseline/generation-v3/protocol-v1/run-4/`. The centralized follow-up records and checkpoints are in `results/baseline/generation-v3/protocol-v1/run-5/` and `models/baseline/generation-v3/protocol-v1/run-5/`.
 
 ### Federated sweep results
 
@@ -46,9 +47,17 @@ Accuracy is the mean final-round validation accuracy across 5 seeds; “±” is
 | OrganSMNIST | 5 | 1 | 0.1 | 46.13% ± 4.62 pp | 1.358 |
 | **OrganSMNIST** | **5** | **3** | **0.1** | **70.48% ± 3.07 pp** | **0.882** |
 
-### Centralized comparison data requiring attention
+### Centralized controls and lower-learning-rate follow-up
 
-The centralized controls are not summarized because their records are incomplete or contain invalid metrics. Resolve these issues before using centralized comparisons:
+The original matched-learning-rate centralized controls below used learning rate 0.1. Their three listed OrganAMNIST seed-42 records contain non-finite losses and parameters and must not be used. The run-5 follow-up used learning rate 0.01 for the same training budgets across all five seeds. These finite results are a separate lower-learning-rate comparison, not replacements for the original 0.1 controls and not learning-rate-matched to the corresponding federated settings.
+
+| Dataset | Round equivalents | Epochs per round equivalent | Learning rate | Seeds | Final validation accuracy | Mean final loss |
+|---------|------------------:|---------------------------:|--------------:|-------|---------------------------:|----------------:|
+| OrganAMNIST | 3 | 1 | 0.01 | 42-46 | 93.63% ± 0.98 pp | 0.279 |
+| OrganAMNIST | 5 | 1 | 0.01 | 42-46 | 93.55% ± 0.45 pp | 0.313 |
+| OrganAMNIST | 5 | 3 | 0.01 | 42-46 | 94.27% ± 1.26 pp | 0.416 |
+
+The original invalid run-4 records are:
 
 - organamnist/centralized_r3_e1_lr0p100/seed-42: Non-finite final validation metrics for organamnist/centralized_r3_e1_lr0p100/seed-42.
 - organamnist/centralized_r5_e1_lr0p100/seed-42: Non-finite final validation metrics for organamnist/centralized_r5_e1_lr0p100/seed-42.
