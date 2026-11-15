@@ -18,6 +18,7 @@ from pytorchexample.experiments.shared.server import (
     targeted_source_to_target_metrics,
 )
 from pytorchexample.shared.metrics import serialize_evaluation_metrics
+from pytorchexample.shared.model import Net
 from recompute_validation_metrics import metrics_match
 
 
@@ -214,6 +215,41 @@ class ServerOutputTests(unittest.TestCase):
             )
             saved_state = torch.load(checkpoint_path, weights_only=True)
             self.assertTrue(torch.equal(saved_state["weight"], torch.tensor([1.0])))
+
+    def test_round_checkpoint_loads_into_model_with_matching_outputs(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            context = Mock()
+            context.run_id = "abc123"
+            context.run_config = {
+                "dataset": "organamnist",
+                "seed": 42,
+                "num-server-rounds": 3,
+                "local-epochs": 1,
+                "learning-rate": 0.1,
+                "models-dir": temp_dir,
+            }
+            original_model = Net().eval()
+            arrays = ArrayRecord(original_model.state_dict())
+
+            checkpoint_path = save_round_checkpoint(
+                context,
+                arrays,
+                2,
+                "generation-v3",
+                "protocol-v1",
+                "run-1",
+            )
+
+            restored_model = Net().eval()
+            restored_model.load_state_dict(
+                torch.load(checkpoint_path, weights_only=True), strict=True
+            )
+            sample = torch.zeros((2, 1, 28, 28))
+            with torch.no_grad():
+                original_output = original_model(sample)
+                restored_output = restored_model(sample)
+
+            torch.testing.assert_close(restored_output, original_output)
 
     def test_repeated_round_checkpoint_does_not_replace_existing_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:

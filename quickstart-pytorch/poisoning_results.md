@@ -5,9 +5,9 @@ high-level findings. The per-run JSON records are the source of truth for full
 metrics, partition manifests, and artifact paths. Clean federated controls are
 documented separately in [baseline_results.md](baseline_results.md).
 
-## OrganAMNIST: kidney-left to kidney-right
+## OrganAMNIST: kidney-left to kidney-right, seeds 42–46
 
-**Status:** Completed exploratory trial; one seed only. Validation was used
+**Status:** Completed five-seed exploratory trial. Validation was used
 throughout training, and test evaluation was disabled.
 
 | Setting | Value |
@@ -15,51 +15,55 @@ throughout training, and test evaluation was disabled.
 | Dataset | OrganAMNIST, 28×28 |
 | Source → target | kidney-left (ID 4) → kidney-right (ID 5) |
 | Clients | 20 |
-| Poisoned clients | 1 (5%); seed 42 selected client 2 |
-| Flip fraction | 100% of client 2's eligible kidney-left training labels |
+| Poisoned clients | 1 (5%); one seeded-random client per run |
+| Flip fraction | 100% of each selected client's eligible kidney-left training labels |
 | Timing | Every training round, starting at round 1 |
 | Training | 5 rounds, 1 local epoch, learning rate 0.1, batch size 32, FedAvg |
-| Seed | 42 |
+| Seeds | 42, 43, 44, 45, 46 |
 
-The poisoned client had 199 kidney-left examples, and all 199 labels were
-flipped. That is about 0.58% of the 34,561-example training split. Validation
+The seed-42 poisoned client had 199 kidney-left examples, and all 199 labels
+were flipped (about 0.58% of the 34,561-example training split). Validation
 labels remained clean.
 
-### Round-5 validation comparison
+### Round-5 validation comparisons
 
-The matched clean control has the same seed and client partition as the saved
-seed-42 baseline. Its per-round validation metrics match that baseline exactly.
+Each clean control uses the same seed and client partition as its saved
+baseline; per-round validation metrics match exactly.
 
-| Condition | Accuracy | Loss | kidney-left recall | kidney-left → kidney-right |
-|-----------|---------:|-----:|-------------------:|--------------------------:|
-| Clean baseline/control | 81.11% | 0.6764 | 87.32% | 13/568 (2.29%) |
-| 1 client, 100% flip | 87.18% | 0.5150 | 84.33% | 42/568 (7.39%) |
-| Change | +6.07 pp | -0.1614 | -2.99 pp | +5.11 pp |
+| Seed | Flipped labels | Accuracy, clean → attack | Loss, clean → attack | kidney-left recall, clean → attack | kidney-left → kidney-right, clean → attack |
+|-----:|---------------:|-------------------------:|--------------------:|-----------------------------------:|-----------------------------------------:|
+| 42 | 199/199 | 81.11% → 87.18% | 0.6764 → 0.5150 | 87.32% → 84.33% | 2.29% (13/568) → 7.39% (42/568) |
+| 43 | 201/201 | 76.80% → 76.06% | 0.7774 → 0.8219 | 81.87% → 67.25% | 1.58% (9/568) → 6.51% (37/568) |
+| 44 | 191/191 | 80.30% → 64.38% | 0.7687 → 1.0792 | 82.39% → 63.91% | 1.94% (11/568) → 1.76% (10/568) |
+| 45 | 195/195 | 78.89% → 83.18% | 0.6863 → 0.6558 | 84.86% → 83.80% | 2.99% (17/568) → 3.70% (21/568) |
+| 46 | 195/195 | 82.70% → 82.61% | 0.6417 → 0.6821 | 83.45% → 81.69% | 2.99% (17/568) → 8.80% (50/568) |
 
 The target-directed error rate was 0% through round 3, 0.70% (4/568) at round
-4, and 7.39% (42/568) at round 5. The increase is consistent with the intended
-targeted direction in this trial. Overall accuracy was also higher in the
-poisoned run, so the aggregate metric does not indicate a general degradation.
-With one seed, these results are exploratory and do not establish a robust
-attack effect.
+4, and 7.39% (42/568) at round 5 for seed 42. Across the five paired seeds,
+the mean change (attack minus clean) was −1.28 percentage points in accuracy,
++0.0407 in loss, −7.78 pp in kidney-left recall, and +3.27 pp in targeted
+error rate. Targeted error increased in four pairs and decreased slightly in
+seed 44; overall accuracy varied, including a substantial decrease in seed 44.
+The results show a variable class-specific effect and do not establish a
+uniform effect across seeds.
 
 ### Label-transformation verification
 
-The run record reports client 2 and 199 flipped examples. A replay using the
-same OrganAMNIST training split, seed-42 client partition, and deterministic
-transform confirmed that all 199 kidney-left labels in that client's 1,728
-examples became kidney-right, no kidney-left labels remained in that client,
-and every non-source label was unchanged. The seven focused data tests also
-passed with:
+The seed-42 run record reports client 2 and 199 flipped examples. A replay
+using the same OrganAMNIST training split, seed-42 client partition, and
+deterministic transform confirmed that all 199 kidney-left labels in that
+client's 1,728 examples became kidney-right, no kidney-left labels remained in
+that client, and every non-source label was unchanged. The focused data tests
+also passed with:
 
 ```bash
 python -m unittest discover -s tests -p 'test_data.py'
 ```
 
 The original run did not persist a per-example before/after label audit. The
-verification above reproduces the recorded transform against the exact
-deterministic partition; it is not a saved snapshot of the tensors used during
-the original Flower execution.
+verification reproduces the recorded transform against the exact deterministic
+partition; it is not a saved snapshot of the tensors used during the original
+Flower execution.
 
 ### Run records
 
@@ -69,10 +73,13 @@ the original Flower execution.
   [seed 42 JSON](results/poisoning/generation-v3/protocol-v1/run-1/organamnist/label_flip_r5_e1_lr0p100_clients0_f0p000_s4_t5/seed-42_run-12640462282327131058.json)
 - Saved clean baseline:
   [seed 42 JSON](results/baseline/generation-v3/protocol-v1/run-4/organamnist/baseline_r5_e1_lr0p100/seed-42_run-13016821332549798429.json)
+- Seeds 43–46:
+  [clean controls](results/poisoning/generation-v3/protocol-v1/run-2/organamnist/label_flip_r5_e1_lr0p100_clients0_f0p000_s4_t5/) · [poisoned runs](results/poisoning/generation-v3/protocol-v1/run-2/organamnist/label_flip_r5_e1_lr0p100_clients1_f1p000_s4_t5/)
 
-All three runs completed five rounds with 20 client results per round and zero
-client failures. The poisoned run's record also includes its confusion matrices,
-plots, checkpoint references, and partition manifest.
+All five poisoned runs and their clean controls completed five rounds with 20
+client results per round and zero client failures. The poisoned records include
+their confusion matrices, plots, checkpoint references, and partition
+manifests.
 
 ## OrganCMNIST and OrganSMNIST: seeds 42–46
 
@@ -118,8 +125,13 @@ results and zero client failures per round; test evaluation was disabled.
 For each seed, the recorded number of flipped labels equals the selected
 client's kidney-left count in its saved partition manifest (240 labels total
 for OrganCMNIST; 292 for OrganSMNIST). The run records do not persist a
-per-example before/after label audit, so the count check does not independently
-replay the tensor transformation.
+per-example before/after label audit. A deterministic replay against the
+cached official training splits for seeds 42–46 reproduced the selected client
+and flip count for both datasets. It confirmed that every source label became
+kidney-right, no source labels remained on the selected client, and no
+non-source labels changed. The replay was also run for all five OrganAMNIST
+seeds. It reproduces the transforms from the saved configuration and matching
+training data, not a snapshot of the tensors used during execution.
 
 Run records:
 
@@ -128,12 +140,26 @@ Run records:
 - OrganSMNIST seed 42: [clean control](results/poisoning/generation-v3/protocol-v1/run-4/organsmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/seed-42_run-15574750315785558871.json) · [poisoned run](results/poisoning/generation-v3/protocol-v1/run-4/organsmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/seed-42_run-16040722783643213093.json)
 - OrganSMNIST seeds 43–46: [clean controls](results/poisoning/generation-v3/protocol-v1/run-6/organsmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/) · [poisoned runs](results/poisoning/generation-v3/protocol-v1/run-6/organsmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/)
 
+## Verification suite
+
+The full quickstart-pytorch suite passed (38 tests):
+
+```bash
+cd quickstart-pytorch
+.venv/bin/python -m unittest discover -s tests -v
+```
+
+The regression checks cover the baseline Flower client/server clean defaults,
+deterministic full label flipping for OrganCMNIST and OrganSMNIST, loading a
+saved round checkpoint into the model, majority-class accuracy reference, and
+overfitting a small image subset with the shared CNN training loop. In
+addition, all 90 saved final and per-round checkpoints from the 15 poisoned
+runs loaded strictly into the CNN and produced finite 11-class outputs.
+
 ## Refinement notes
 
 - Keep each poisoned run paired with a clean control using the same seed,
   client count, partition, and training settings.
-- The OrganAMNIST seed-43–46 records are present under poisoning `run-2`;
-  validate those before treating the OrganAMNIST effect as replicated.
 - Change one attack factor at a time. Track targeted source-to-target
   misclassification, source-class recall, overall validation metrics, and
   label-transformation counts.

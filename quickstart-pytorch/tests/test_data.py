@@ -106,6 +106,49 @@ class LabelFlippingTests(unittest.TestCase):
         )
         self.assertEqual(dataset.labels.reshape(-1).tolist(), [1, 0, 1])
 
+    def test_full_flip_replay_is_deterministic_for_organ_c_and_s(self):
+        labels = [4, 0, 5, 4, 6, 4]
+        expected = [5, 0, 5, 5, 6, 5]
+
+        for dataset_name in ("organcmnist", "organsmnist"):
+            self.assertEqual(
+                get_class_names(dataset_name)[4:6],
+                ["kidney-left", "kidney-right"],
+            )
+            for seed in range(42, 47):
+                with self.subTest(dataset=dataset_name, seed=seed):
+                    dataset = LabeledDataset(labels)
+                    subset = Subset(dataset, list(range(len(labels))))
+                    poisoned_client_id = select_poisoned_clients(
+                        20, 1, seed
+                    )[0]
+                    transform = make_label_flip_transform(
+                        [poisoned_client_id], 4, 5, 1.0, seed
+                    )
+
+                    poisoned = transform(subset, poisoned_client_id)
+                    replayed = [
+                        poisoned[index][1].item()
+                        for index in range(len(poisoned))
+                    ]
+                    self.assertEqual(replayed, expected)
+                    self.assertEqual(
+                        dataset.labels.reshape(-1).tolist(), labels
+                    )
+                    self.assertIs(
+                        transform(subset, (poisoned_client_id + 1) % 20),
+                        subset,
+                    )
+
+                    replayed_again = transform(subset, poisoned_client_id)
+                    self.assertEqual(
+                        [
+                            replayed_again[index][1].item()
+                            for index in range(len(replayed_again))
+                        ],
+                        replayed,
+                    )
+
     def test_poisoned_client_selection_is_seeded_and_has_requested_size(self):
         selected = select_poisoned_clients(10, 3, seed=42)
 

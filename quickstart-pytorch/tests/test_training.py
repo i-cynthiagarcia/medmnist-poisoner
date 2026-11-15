@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
+from pytorchexample.shared.model import Net
 from pytorchexample.shared.training import evaluate, test, train, train_epoch
 
 
@@ -35,6 +36,22 @@ class PredictedClassModel(nn.Module):
         )
         logits.scatter_(1, predicted_classes.unsqueeze(1), 5.0)
         return logits + self.anchor * 0.0
+
+
+class ConstantClassModel(nn.Module):
+    """Always predict one class for a majority-class reference."""
+
+    def __init__(self, predicted_class, num_classes=11):
+        super().__init__()
+        self.register_buffer(
+            "logits",
+            torch.nn.functional.one_hot(
+                torch.tensor(predicted_class), num_classes
+            ).float(),
+        )
+
+    def forward(self, images):
+        return self.logits.expand(len(images), -1)
 
 
 class TrainingTests(unittest.TestCase):
@@ -105,6 +122,62 @@ class TrainingTests(unittest.TestCase):
         self.assertEqual(len(metrics["confusion_matrix"]), 11 * 11)
         self.assertEqual(metrics["confusion_matrix"][:3], [1, 1, 0])
         self.assertEqual(metrics["confusion_matrix"][11 : 11 + 3], [0, 1, 0])
+
+    def test_evaluation_accuracy_matches_majority_class_reference(self):
+        images = torch.zeros((8, 1))
+        labels = torch.tensor([0, 0, 0, 0, 0, 1, 1, 2])
+        loader = DataLoader(
+            TensorDataset(images, labels), batch_size=3, shuffle=False
+        )
+        majority_reference = (
+            torch.bincount(labels).max().item() / len(labels)
+        )
+
+        metrics = evaluate(
+            ConstantClassModel(predicted_class=0),
+            loader,
+            device="cpu",
+            dataset="organamnist",
+        )
+
+        self.assertEqual(majority_reference, 5 / 8)
+        self.assertAlmostEqual(metrics["accuracy"], majority_reference)
+
+    def test_shared_training_can_overfit_a_small_image_subset(self):
+        images = torch.zeros((8, 1, 28, 28))
+        images[:4, 0, 3:11, 3:11] = 1.0
+        images[4:, 0, 17:25, 17:25] = 1.0
+        labels = torch.tensor([0] * 4 + [1] * 4)
+        dataset = TensorDataset(images, labels)
+        evaluation_loader = DataLoader(dataset, batch_size=8, shuffle=False)
+        trainloader = DataLoader(
+            dataset,
+            batch_size=8,
+            shuffle=True,
+            generator=torch.Generator().manual_seed(7),
+        )
+        majority_reference = 4 / len(labels)
+
+        with torch.random.fork_rng(devices=[]):
+            torch.manual_seed(7)
+            model = Net()
+            initial_metrics = evaluate(
+                model, evaluation_loader, device="cpu", dataset="organamnist"
+            )
+            train(
+                model,
+                trainloader,
+                epochs=10,
+                lr=0.1,
+                device="cpu",
+            )
+            final_metrics = evaluate(
+                model, evaluation_loader, device="cpu", dataset="organamnist"
+            )
+
+        self.assertGreaterEqual(final_metrics["accuracy"], 0.99)
+        self.assertGreater(final_metrics["accuracy"], majority_reference)
+        self.assertLess(final_metrics["loss"], initial_metrics["loss"])
 
 
 if __name__ == "__main__":
