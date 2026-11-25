@@ -126,10 +126,12 @@ deviation.
 
 ## Frozen Protocol-v3: OrganAMNIST Attacker Count × Flip Dose
 
-**Status:** Frozen; not yet executed. This is a new factorial study, separate
-from the completed single-attacker protocol-v2. Its purpose is to estimate
-how attacker count and per-attacker flip dose, including their interaction,
-change kidney-left-to-kidney-right validation errors.
+**Status:** The frozen matrix completed execution, but verification found
+three invalid cells that reproduced on rerun. The factorial analysis is not
+ready to finalize. This study is separate from the completed single-attacker
+protocol-v2 and estimates how attacker count and per-attacker flip dose,
+including their interaction, change kidney-left-to-kidney-right validation
+errors.
 
 | Setting | Frozen value |
 |---------|--------------|
@@ -168,6 +170,43 @@ count with every nonzero dose (16 attack conditions per seed). Include one
 zero-poisoned-client, zero-dose clean control per seed. The current runner
 records that control once for each seed in an execution, so a full ten-seed
 execution contains 170 runs (160 attack conditions plus 10 controls).
+
+### Execution and validity
+
+The initial execution, [run-1 results](results/poisoning/generation-v3/protocol-v3/run-1/organamnist/)
+and [run-1 models](models/poisoning/generation-v3/protocol-v3/run-1/organamnist/),
+contains all 170 unique seed-by-condition cells. All runs completed five
+rounds with 20 client results and no client failures per round. Partition
+coverage checks passed, recorded flip counts match the requested per-client
+fractions, and test metrics are null. Finite-value checks passed for 167
+cells. Three cells have non-finite training/validation losses and model
+parameters:
+
+| Seed | Poisoned clients | Flip fraction | First non-finite round |
+|-----:|-----------------:|--------------:|-----------------------:|
+| 47 | 4 | 50% | 2 |
+| 48 | 4 | 25% | 2 |
+| 50 | 4 | 50% | 4 |
+
+These were rerun with unchanged settings in
+[run-2 results](results/poisoning/generation-v3/protocol-v3/run-2/organamnist/)
+and [run-2 models](models/poisoning/generation-v3/protocol-v3/run-2/organamnist/).
+Each rerun completed all five rounds with no client failures, but reproduced
+the same non-finite losses and parameters at the same rounds. The run-2 records
+mark `metrics_finite`, `model_parameters_finite`, and `valid_run` as false.
+The original run-1 records predate the finite-value validity check and
+incorrectly mark these runs valid. The check is now enforced when new records
+are written; see `pytorchexample/experiments/shared/server.py`.
+
+- Seed 47, 4 clients, 50%: [run-1 record](results/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p500_s4_t5/seed-47_run-747155533925153753.json) · [run-2 rerun](results/poisoning/generation-v3/protocol-v3/run-2/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p500_s4_t5/seed-47_run-10086339224390307204.json)
+- Seed 48, 4 clients, 25%: [run-1 record](results/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p250_s4_t5/seed-48_run-13175489404516207263.json) · [run-2 rerun](results/poisoning/generation-v3/protocol-v3/run-2/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p250_s4_t5/seed-48_run-7225105320867385753.json)
+- Seed 50, 4 clients, 50%: [run-1 record](results/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p500_s4_t5/seed-50_run-18189058754778482809.json) · [run-2 rerun](results/poisoning/generation-v3/protocol-v3/run-2/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p500_s4_t5/seed-50_run-4125338092416594049.json)
+
+The matrix therefore has 170 unique cells but only 167 valid cells; the three
+reruns are repeat attempts, not additional seed observations. Preserve both
+attempts and exclude the affected cells from primary analysis until the
+numerical instability is understood and a protocol deviation or new protocol
+version is approved. No factorial effect estimates are reported yet.
 
 Use the same seed-specific data partition in every condition. The existing
 seeded selection selects nested poisoned-client sets as count increases and
