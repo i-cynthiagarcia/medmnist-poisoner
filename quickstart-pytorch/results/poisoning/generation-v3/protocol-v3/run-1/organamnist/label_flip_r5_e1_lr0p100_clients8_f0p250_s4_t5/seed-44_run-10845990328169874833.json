@@ -1,0 +1,1467 @@
+{
+  "run_id": 10845990328169874833,
+  "generation_id": "generation-v3",
+  "protocol_id": "protocol-v3",
+  "execution_id": "run-1",
+  "dataset": "organamnist",
+  "experiment": "label_flip_r5_e1_lr0p100_clients8_f0p250_s4_t5",
+  "status": "completed",
+  "training_mode": "federated_label_flipping",
+  "model_type": "federated_aggregate",
+  "model_artifact": "models/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients8_f0p250_s4_t5/seed-44_run-10845990328169874833.pt",
+  "aggregation": "FedAvg",
+  "seed": 44,
+  "loss_aggregation": "per_image",
+  "configuration": {
+    "clients": 20,
+    "client_models": {
+      "count": 20,
+      "training_data": "uniform_partition",
+      "weights_saved": false
+    },
+    "federated_rounds": 5,
+    "local_epochs": 1,
+    "learning_rate": 0.1,
+    "batch_size": 32,
+    "fraction_evaluate": 0.0,
+    "label_flipping": {
+      "type": "targeted_label_flipping",
+      "source_class_id": 4,
+      "source_class_name": "kidney-left",
+      "target_class_id": 5,
+      "target_class_name": "kidney-right",
+      "fraction_of_source_labels_flipped_per_poisoned_client": 0.25,
+      "num_poisoned_clients": 8,
+      "poisoned_client_ids": [
+        0,
+        4,
+        6,
+        9,
+        10,
+        12,
+        14,
+        15
+      ],
+      "flipped_source_examples_by_client": {
+        "0": 48,
+        "4": 50,
+        "6": 52,
+        "9": 45,
+        "10": 55,
+        "12": 48,
+        "14": 49,
+        "15": 50
+      },
+      "total_flipped_source_examples": 397,
+      "client_selection": "seeded_random_without_replacement",
+      "example_selection": "seeded_random_per_client"
+    }
+  },
+  "metrics": {
+    "class_names": [
+      "bladder",
+      "femur-left",
+      "femur-right",
+      "heart",
+      "kidney-left",
+      "kidney-right",
+      "liver",
+      "lung-left",
+      "lung-right",
+      "pancreas",
+      "spleen"
+    ],
+    "confusion_matrix_axes": {
+      "rows": "true_class",
+      "columns": "predicted_class"
+    },
+    "validation_by_round": {
+      "0": {
+        "loss": 2.3902533258941467,
+        "accuracy": 0.09859805885071637,
+        "per_class": {
+          "bladder": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 321
+          },
+          "femur-left": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 233
+          },
+          "femur-right": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 225
+          },
+          "heart": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 392
+          },
+          "kidney-left": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 568
+          },
+          "kidney-right": {
+            "precision": 0.09818125770653514,
+            "recall": 1.0,
+            "f1": 0.17880701754385966,
+            "support": 637
+          },
+          "liver": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 1033
+          },
+          "lung-left": {
+            "precision": 1.0,
+            "recall": 0.002904162633107454,
+            "f1": 0.005791505791505792,
+            "support": 1033
+          },
+          "lung-right": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 1009
+          },
+          "pancreas": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 529
+          },
+          "spleen": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 511
+          }
+        },
+        "confusion_matrix": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            321,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            233,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            225,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            392,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            568,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            637,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1033,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1030,
+            0,
+            3,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1009,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            529,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            511,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "1": {
+        "loss": 2.0621142495378217,
+        "accuracy": 0.3711292558927746,
+        "per_class": {
+          "bladder": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 321
+          },
+          "femur-left": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 233
+          },
+          "femur-right": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 225
+          },
+          "heart": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 392
+          },
+          "kidney-left": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 568
+          },
+          "kidney-right": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 637
+          },
+          "liver": {
+            "precision": 0.2103869653767821,
+            "recall": 1.0,
+            "f1": 0.34763587413764097,
+            "support": 1033
+          },
+          "lung-left": {
+            "precision": 0.9968152866242038,
+            "recall": 0.6060019361084221,
+            "f1": 0.7537627934978928,
+            "support": 1033
+          },
+          "lung-right": {
+            "precision": 0.895933014354067,
+            "recall": 0.7423191278493558,
+            "f1": 0.8119241192411925,
+            "support": 1009
+          },
+          "pancreas": {
+            "precision": 1.0,
+            "recall": 0.001890359168241966,
+            "f1": 0.0037735849056603774,
+            "support": 529
+          },
+          "spleen": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 511
+          }
+        },
+        "confusion_matrix": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            321,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            233,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            225,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            392,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            568,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            637,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1033,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            213,
+            626,
+            87,
+            0,
+            107
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            255,
+            1,
+            749,
+            0,
+            4
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            522,
+            1,
+            0,
+            1,
+            5
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            511,
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "2": {
+        "loss": 2.210278868509944,
+        "accuracy": 0.2702203050377446,
+        "per_class": {
+          "bladder": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 321
+          },
+          "femur-left": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 233
+          },
+          "femur-right": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 225
+          },
+          "heart": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 392
+          },
+          "kidney-left": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 568
+          },
+          "kidney-right": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 637
+          },
+          "liver": {
+            "precision": 0.2129457843743558,
+            "recall": 1.0,
+            "f1": 0.35112168592794013,
+            "support": 1033
+          },
+          "lung-left": {
+            "precision": 1.0,
+            "recall": 0.13843175217812198,
+            "f1": 0.24319727891156465,
+            "support": 1033
+          },
+          "lung-right": {
+            "precision": 1.0,
+            "recall": 0.5708622398414271,
+            "f1": 0.726813880126183,
+            "support": 1009
+          },
+          "pancreas": {
+            "precision": 0.003048780487804878,
+            "recall": 0.001890359168241966,
+            "f1": 0.0023337222870478415,
+            "support": 529
+          },
+          "spleen": {
+            "precision": 0.0019083969465648854,
+            "recall": 0.0019569471624266144,
+            "f1": 0.001932367149758454,
+            "support": 511
+          }
+        },
+        "confusion_matrix": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            5,
+            316,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            230,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            225,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            7,
+            371,
+            0,
+            0,
+            0,
+            14
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            562,
+            0,
+            0,
+            0,
+            3
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            637,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1033,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            35,
+            112,
+            143,
+            0,
+            325,
+            418
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            12,
+            333,
+            0,
+            576,
+            0,
+            88
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            528,
+            0,
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            4,
+            504,
+            0,
+            0,
+            2,
+            1
+          ]
+        ]
+      },
+      "3": {
+        "loss": 1.6193070541708592,
+        "accuracy": 0.47481127715298105,
+        "per_class": {
+          "bladder": {
+            "precision": 0.04918032786885246,
+            "recall": 0.009345794392523364,
+            "f1": 0.015706806282722512,
+            "support": 321
+          },
+          "femur-left": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 233
+          },
+          "femur-right": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 225
+          },
+          "heart": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 392
+          },
+          "kidney-left": {
+            "precision": 0.0893854748603352,
+            "recall": 0.028169014084507043,
+            "f1": 0.0428380187416332,
+            "support": 568
+          },
+          "kidney-right": {
+            "precision": 0.3333333333333333,
+            "recall": 0.13186813186813187,
+            "f1": 0.18897637795275588,
+            "support": 637
+          },
+          "liver": {
+            "precision": 0.94875,
+            "recall": 0.7347531461761858,
+            "f1": 0.8281505728314239,
+            "support": 1033
+          },
+          "lung-left": {
+            "precision": 1.0,
+            "recall": 0.7831558567279767,
+            "f1": 0.8783930510314875,
+            "support": 1033
+          },
+          "lung-right": {
+            "precision": 0.9733759318423855,
+            "recall": 0.9058473736372646,
+            "f1": 0.9383983572895278,
+            "support": 1009
+          },
+          "pancreas": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 529
+          },
+          "spleen": {
+            "precision": 0.14405797101449275,
+            "recall": 0.9726027397260274,
+            "f1": 0.2509467306235799,
+            "support": 511
+          }
+        },
+        "confusion_matrix": [
+          [
+            3,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            1,
+            315
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            232
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            224
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            5,
+            0,
+            0,
+            0,
+            0,
+            387
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            16,
+            0,
+            1,
+            0,
+            0,
+            0,
+            551
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            105,
+            84,
+            31,
+            0,
+            2,
+            0,
+            415
+          ],
+          [
+            42,
+            0,
+            0,
+            0,
+            17,
+            112,
+            759,
+            0,
+            0,
+            0,
+            103
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            809,
+            18,
+            0,
+            206
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            34,
+            19,
+            1,
+            0,
+            914,
+            0,
+            41
+          ],
+          [
+            16,
+            0,
+            0,
+            0,
+            5,
+            22,
+            7,
+            0,
+            0,
+            0,
+            479
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            8,
+            1,
+            0,
+            5,
+            0,
+            497
+          ]
+        ]
+      },
+      "4": {
+        "loss": 1.0112820456197313,
+        "accuracy": 0.6593745185641657,
+        "per_class": {
+          "bladder": {
+            "precision": 0.3274021352313167,
+            "recall": 0.8598130841121495,
+            "f1": 0.4742268041237114,
+            "support": 321
+          },
+          "femur-left": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 233
+          },
+          "femur-right": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 225
+          },
+          "heart": {
+            "precision": 1.0,
+            "recall": 0.7857142857142857,
+            "f1": 0.88,
+            "support": 392
+          },
+          "kidney-left": {
+            "precision": 0.6233009708737864,
+            "recall": 0.5651408450704225,
+            "f1": 0.592797783933518,
+            "support": 568
+          },
+          "kidney-right": {
+            "precision": 0.759656652360515,
+            "recall": 0.2778649921507064,
+            "f1": 0.40689655172413797,
+            "support": 637
+          },
+          "liver": {
+            "precision": 0.728253055355859,
+            "recall": 0.9806389157792836,
+            "f1": 0.8358085808580858,
+            "support": 1033
+          },
+          "lung-left": {
+            "precision": 0.996742671009772,
+            "recall": 0.888673765730881,
+            "f1": 0.9396110542476971,
+            "support": 1033
+          },
+          "lung-right": {
+            "precision": 0.9923747276688453,
+            "recall": 0.9028741328047571,
+            "f1": 0.9455111572392318,
+            "support": 1009
+          },
+          "pancreas": {
+            "precision": 1.0,
+            "recall": 0.13799621928166353,
+            "f1": 0.24252491694352163,
+            "support": 529
+          },
+          "spleen": {
+            "precision": 0.2195500387897595,
+            "recall": 0.5538160469667319,
+            "f1": 0.31444444444444447,
+            "support": 511
+          }
+        },
+        "confusion_matrix": [
+          [
+            276,
+            0,
+            0,
+            0,
+            9,
+            2,
+            3,
+            0,
+            0,
+            0,
+            31
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            45,
+            18,
+            5,
+            0,
+            0,
+            0,
+            165
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            13,
+            9,
+            3,
+            0,
+            0,
+            0,
+            200
+          ],
+          [
+            0,
+            0,
+            0,
+            308,
+            24,
+            2,
+            10,
+            0,
+            0,
+            0,
+            48
+          ],
+          [
+            23,
+            0,
+            0,
+            0,
+            321,
+            6,
+            8,
+            0,
+            0,
+            0,
+            210
+          ],
+          [
+            66,
+            0,
+            0,
+            0,
+            83,
+            177,
+            225,
+            0,
+            0,
+            0,
+            86
+          ],
+          [
+            20,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1013,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            918,
+            7,
+            0,
+            108
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            64,
+            3,
+            911,
+            0,
+            29
+          ],
+          [
+            310,
+            0,
+            0,
+            0,
+            0,
+            0,
+            17,
+            0,
+            0,
+            73,
+            129
+          ],
+          [
+            148,
+            0,
+            0,
+            0,
+            20,
+            17,
+            43,
+            0,
+            0,
+            0,
+            283
+          ]
+        ]
+      },
+      "5": {
+        "loss": 0.7754093429337406,
+        "accuracy": 0.7661377291634571,
+        "per_class": {
+          "bladder": {
+            "precision": 0.5991471215351812,
+            "recall": 0.8753894080996885,
+            "f1": 0.7113924050632912,
+            "support": 321
+          },
+          "femur-left": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 233
+          },
+          "femur-right": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 225
+          },
+          "heart": {
+            "precision": 0.997229916897507,
+            "recall": 0.9183673469387755,
+            "f1": 0.9561752988047808,
+            "support": 392
+          },
+          "kidney-left": {
+            "precision": 0.851528384279476,
+            "recall": 0.6866197183098591,
+            "f1": 0.7602339181286549,
+            "support": 568
+          },
+          "kidney-right": {
+            "precision": 0.8123324396782842,
+            "recall": 0.47566718995290425,
+            "f1": 0.6,
+            "support": 637
+          },
+          "liver": {
+            "precision": 0.8084596967278531,
+            "recall": 0.9806389157792836,
+            "f1": 0.8862642169728785,
+            "support": 1033
+          },
+          "lung-left": {
+            "precision": 0.996938775510204,
+            "recall": 0.9457889641819942,
+            "f1": 0.9706905116741182,
+            "support": 1033
+          },
+          "lung-right": {
+            "precision": 0.9955898566703418,
+            "recall": 0.8949454905847374,
+            "f1": 0.94258872651357,
+            "support": 1009
+          },
+          "pancreas": {
+            "precision": 0.8829268292682927,
+            "recall": 0.6843100189035917,
+            "f1": 0.7710330138445154,
+            "support": 529
+          },
+          "spleen": {
+            "precision": 0.3,
+            "recall": 0.7514677103718199,
+            "f1": 0.42881072026800665,
+            "support": 511
+          }
+        },
+        "confusion_matrix": [
+          [
+            281,
+            0,
+            0,
+            0,
+            2,
+            8,
+            1,
+            0,
+            0,
+            12,
+            17
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            11,
+            15,
+            4,
+            0,
+            0,
+            2,
+            201
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            4,
+            15,
+            1,
+            0,
+            0,
+            15,
+            190
+          ],
+          [
+            0,
+            0,
+            0,
+            360,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            32
+          ],
+          [
+            6,
+            0,
+            0,
+            0,
+            390,
+            6,
+            1,
+            0,
+            0,
+            3,
+            162
+          ],
+          [
+            34,
+            0,
+            0,
+            0,
+            18,
+            303,
+            151,
+            0,
+            0,
+            5,
+            126
+          ],
+          [
+            17,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1013,
+            0,
+            0,
+            0,
+            3
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            977,
+            4,
+            0,
+            52
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            10,
+            7,
+            41,
+            3,
+            903,
+            0,
+            45
+          ],
+          [
+            70,
+            0,
+            0,
+            0,
+            0,
+            4,
+            25,
+            0,
+            0,
+            362,
+            68
+          ],
+          [
+            61,
+            0,
+            0,
+            1,
+            23,
+            15,
+            16,
+            0,
+            0,
+            11,
+            384
+          ]
+        ]
+      }
+    },
+    "test_final": null,
+    "confusion_matrix_plots": {
+      "validation_by_round": {
+        "0": "results/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients8_f0p250_s4_t5/plots/seed-44_run-10845990328169874833/validation-round-000.png",
+        "1": "results/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients8_f0p250_s4_t5/plots/seed-44_run-10845990328169874833/validation-round-001.png",
+        "2": "results/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients8_f0p250_s4_t5/plots/seed-44_run-10845990328169874833/validation-round-002.png",
+        "3": "results/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients8_f0p250_s4_t5/plots/seed-44_run-10845990328169874833/validation-round-003.png",
+        "4": "results/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients8_f0p250_s4_t5/plots/seed-44_run-10845990328169874833/validation-round-004.png",
+        "5": "results/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients8_f0p250_s4_t5/plots/seed-44_run-10845990328169874833/validation-round-005.png"
+      },
+      "validation_final_recomputed": null,
+      "test_final": null
+    },
+    "targeted_source_to_target_misclassification": {
+      "validation_by_round": {
+        "0": {
+          "rate": 1.0,
+          "support": 568
+        },
+        "1": {
+          "rate": 0.0,
+          "support": 568
+        },
+        "2": {
+          "rate": 0.00528169014084507,
+          "support": 568
+        },
+        "3": {
+          "rate": 0.0,
+          "support": 568
+        },
+        "4": {
+          "rate": 0.01056338028169014,
+          "support": 568
+        },
+        "5": {
+          "rate": 0.01056338028169014,
+          "support": 568
+        }
+      },
+      "test_final": null
+    }
+  },
+  "round_checkpoints": {
+    "1": "models/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients8_f0p250_s4_t5/checkpoints/seed-44_run-10845990328169874833/round-001.pt",
+    "2": "models/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients8_f0p250_s4_t5/checkpoints/seed-44_run-10845990328169874833/round-002.pt",
+    "3": "models/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients8_f0p250_s4_t5/checkpoints/seed-44_run-10845990328169874833/round-003.pt",
+    "4": "models/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients8_f0p250_s4_t5/checkpoints/seed-44_run-10845990328169874833/round-004.pt",
+    "5": "models/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients8_f0p250_s4_t5/checkpoints/seed-44_run-10845990328169874833/round-005.pt"
+  },
+  "partition_manifest": "results/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients8_f0p250_s4_t5/partition-seed-44_run-10845990328169874833.json",
+  "client_train_metrics": {
+    "1": {
+      "train_loss": 2.064840201564293
+    },
+    "2": {
+      "train_loss": 1.7225873108860217
+    },
+    "3": {
+      "train_loss": 1.5395801556903366
+    },
+    "4": {
+      "train_loss": 1.2438671896232807
+    },
+    "5": {
+      "train_loss": 1.0088278190073692
+    }
+  },
+  "training_results": {
+    "received_results_by_round": {
+      "1": 20,
+      "2": 20,
+      "3": 20,
+      "4": 20,
+      "5": 20
+    },
+    "client_failures_by_round": {
+      "1": 0,
+      "2": 0,
+      "3": 0,
+      "4": 0,
+      "5": 0
+    },
+    "valid_run": true
+  }
+}
