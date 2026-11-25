@@ -67,11 +67,38 @@ The original invalid run-4 records are:
 
 | Dataset | Rounds | Local epochs | Learning rate | Seeds |
 |---------|-------:|-------------:|--------------:|-------|
-| OrganAMNIST | 5 | 1 | 0.1 | 42, 43, 44, 45, 46 |
+| OrganAMNIST | 5 | 1 | 0.1 | 42, 43, 44, 45, 46, 47, 48, 49, 50, 51 |
 | OrganCMNIST | 5 | 3 | 0.1 | 42, 43, 44, 45, 46 |
 | OrganSMNIST | 5 | 3 | 0.1 | 42, 43, 44, 45, 46 |
 
 These are the best mean validation-accuracy settings among the seven tested configurations per dataset, not estimates of globally optimal settings. Keep each dataset's configuration fixed across its clean and poisoned runs; do not retune settings per attack condition. The shared validation set informed this selection, so reserve the test split for final evaluation after the protocol is locked.
+
+### OrganAMNIST selected-setting seed extension
+
+Five additional clean controls for the selected OrganAMNIST setting completed
+in `generation-v3/protocol-v1/run-6` (seeds 47–51). Each used 5 rounds, 1
+local epoch, learning rate 0.1, and 20 clients. All five runs passed validity
+checks, completed every round without client failures, and have verified
+partitions. Test evaluation remained disabled. Per-run JSON records contain
+validation metrics, class metrics, confusion matrices for initialization and
+all five rounds, and plot/checkpoint references.
+
+| Seed | Final validation accuracy | Final validation loss |
+|-----:|--------------------------:|----------------------:|
+| 47 | 80.68% | 0.792 |
+| 48 | 84.42% | 0.612 |
+| 49 | 80.87% | 0.766 |
+| 50 | 78.34% | 0.745 |
+| 51 | 78.86% | 0.695 |
+| **Seeds 47–51 mean** | **80.63% ± 2.14 pp** | **0.722** |
+
+Combining these with the original selected-setting controls for seeds 42–46
+gives a ten-seed mean final validation accuracy of **80.30% ± 2.10 pp** and
+mean final loss of **0.716**. Accuracy standard deviation is the population
+standard deviation, consistent with the sweep tables above. The additional
+records are in
+[`results/baseline/generation-v3/protocol-v1/run-6/organamnist/baseline_r5_e1_lr0p100/`](results/baseline/generation-v3/protocol-v1/run-6/organamnist/baseline_r5_e1_lr0p100/);
+the original five-seed sweep summary above remains unchanged.
 
 ## Previous Reference: Generation-v2 / Validation-v2
 
