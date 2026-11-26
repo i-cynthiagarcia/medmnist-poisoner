@@ -13,6 +13,7 @@ from pytorchexample.shared.artifacts import (
     validate_generation_id,
 )
 from pytorchexample.experiments.shared.server import (
+    _contains_only_finite_values,
     save_partition_manifest,
     save_round_checkpoint,
     targeted_source_to_target_metrics,
@@ -23,6 +24,20 @@ from recompute_validation_metrics import metrics_match
 
 
 class ServerOutputTests(unittest.TestCase):
+    def test_run_values_reject_non_finite_metrics_and_parameters(self):
+        finite_values = {
+            "loss": 0.25,
+            "confusion_matrix": [[1, 0], [0, 1]],
+            "weights": torch.tensor([1.0, -2.0]),
+        }
+        self.assertTrue(_contains_only_finite_values(finite_values))
+        self.assertFalse(_contains_only_finite_values({"loss": float("nan")}))
+        self.assertFalse(
+            _contains_only_finite_values(
+                {"weights": torch.tensor([1.0, float("inf")])}
+            )
+        )
+
     def test_targeted_misclassification_rate_uses_source_row_support(self):
         metrics = {"confusion_matrix": [[4, 3, 1], [1, 6, 0], [0, 2, 5]]}
 

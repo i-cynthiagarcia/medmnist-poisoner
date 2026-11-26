@@ -17,7 +17,9 @@ Python `>=3.10,<3.14`; Python 3.12 and 3.13 meet this requirement, while Python
 create and activate a virtual environment with a supported interpreter, then
 install the project and its dependencies in editable mode. The
 `flwr[simulation]` dependency provides the `flwr` command used below.
-The project-local `.gitignore` excludes `.venv/` from Flower app bundles.
+The project-local `.gitignore` excludes `.venv/`, and Flower app bundles
+include only the application source, README, and license, so generated
+experiment results do not inflate subsequent FABs.
 
 Linux/macOS:
 
