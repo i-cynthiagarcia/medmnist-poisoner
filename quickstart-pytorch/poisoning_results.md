@@ -206,7 +206,34 @@ The matrix therefore has 170 unique cells but only 167 valid cells; the three
 reruns are repeat attempts, not additional seed observations. Preserve both
 attempts and exclude the affected cells from primary analysis until the
 numerical instability is understood and a protocol deviation or new protocol
-version is approved. No factorial effect estimates are reported yet.
+version is approved. The valid OrganAMNIST records are included in the
+cross-dataset summary below; the three affected cells remain excluded.
+
+### Offline diagnosis of the non-finite updates
+
+A CPU replay from the saved pre-failure global checkpoints localizes the
+divergence to client-local SGD, not the validation or result-serialization
+path. For seed 47 (4 clients, 50%), poisoned client 5 first produced a
+non-finite loss at batch 50 of round 2; its preceding finite batch losses had
+already grown to `2.8e19`. For seed 48 (4 clients, 25%), unpoisoned client 13
+first produced a non-finite loss at batch 41 of round 2, after a finite loss
+of `1.9e28`. In both cases the round-1 global checkpoint was finite.
+
+Seed 50 (4 clients, 50%) shows the escalation earlier: the unpoisoned client 9
+reached a local parameter magnitude of about 410 in round 2, and unpoisoned
+client 19 reached about 2,945 in round 3. The corresponding saved global
+checkpoints grew from maximum absolute parameter values of about 20.35 to
+147.19. A replay of those two rounds reproduced the saved aggregate tensors
+exactly. In round 4, unpoisoned client 9's loss rose above `1e14` before
+becoming non-finite at batch 27.
+
+Two failures therefore first appear in unpoisoned clients. The evidence points
+to unstable local optimization under the frozen learning rate (`0.1`) and
+momentum (`0.9`); it does not establish that the label-flip transform itself
+is faulty. These are offline replays, not per-client traces captured during
+the original Flower runs. Keep protocol-v3 settings and results unchanged;
+any mitigation such as changing the learning rate or adding gradient clipping
+requires an explicitly versioned protocol decision.
 
 Use the same seed-specific data partition in every condition. The existing
 seeded selection selects nested poisoned-client sets as count increases and
@@ -368,6 +395,29 @@ Run records:
 - OrganSMNIST seed 42: [clean control](results/poisoning/generation-v3/protocol-v1/run-4/organsmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/seed-42_run-15574750315785558871.json) · [poisoned run](results/poisoning/generation-v3/protocol-v1/run-4/organsmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/seed-42_run-16040722783643213093.json)
 - OrganSMNIST seeds 43–46: [clean controls](results/poisoning/generation-v3/protocol-v1/run-6/organsmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/) · [poisoned runs](results/poisoning/generation-v3/protocol-v1/run-6/organsmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/)
 
+## OrganCMNIST and OrganSMNIST stability pilot (protocol-v4)
+
+**Status:** All 12 pilot runs passed validity checks: three targeted attack
+conditions and their same-seed clean controls on each dataset. The attacks
+reused the OrganAMNIST failure configurations (seed 47, 4 clients, 50%; seed
+48, 4 clients, 25%; seed 50, 4 clients, 50%) with the same class-4→class-5
+target, 20 clients, 5 rounds, 1 local epoch, learning rate 0.1, and batch size
+32. Test evaluation remained disabled.
+
+All runs completed five rounds with 20 client results and zero client failures
+per round. Recorded metrics, final model parameters, and all 60 round
+checkpoints were finite; all 12 final models and 60 checkpoints loaded
+successfully. Partition manifests passed their coverage checks, matched
+between each clean/attack pair, and the recorded flip counts agreed with the
+selected clients' source-class counts. These are stability checks, not
+full-matrix effect estimates. Artifacts are under
+`results/poisoning/generation-v3/protocol-v4/run-*/` and
+`models/poisoning/generation-v3/protocol-v4/run-*/`.
+
+The pilot supports proceeding to full OrganCMNIST and OrganSMNIST sweeps under
+the same training settings. Keep the pilot-only `protocol-v4` artifacts
+separate; record and execute the full matrices under a new protocol ID.
+
 ## Verification suite
 
 The full quickstart-pytorch suite passed (38 tests):
@@ -396,3 +446,112 @@ runs loaded strictly into the CNN and produced finite 11-class outputs.
 - For every future result, record the generation/protocol/execution IDs, run
   JSON path, clean-control pairing, selected client IDs, flipped-example
   counts, label-audit outcome, and test-evaluation status.
+
+## Frozen full-matrix results: OrganAMNIST, OrganCMNIST, and OrganSMNIST
+
+These result directories are the frozen label-flipping baselines for the
+upcoming defense experiments. Each matrix has 16 poisoned conditions (1, 2, 4,
+or 8 poisoned clients crossed with per-client flip fractions of 25%, 50%, 75%,
+or 100%) and one matched clean control for each seed, 42–51. The common
+training settings are 20 clients with FedAvg, 5 rounds, 1 local epoch per
+round, learning rate 0.1, and batch size 32. The targeted transform maps
+kidney-left (class 4) to kidney-right (class 5) during every training round.
+Validation evaluation was enabled; test evaluation was disabled.
+
+| Dataset | Frozen result records | Model artifacts |
+|---------|-----------------------|-----------------|
+| OrganAMNIST, protocol-v3 | [run-1 results](results/poisoning/generation-v3/protocol-v3/run-1/organamnist/); three failure reruns in [run-2](results/poisoning/generation-v3/protocol-v3/run-2/organamnist/) | [run-1 models](models/poisoning/generation-v3/protocol-v3/run-1/organamnist/) |
+| OrganCMNIST, protocol-v5 | [run-4 results](results/poisoning/generation-v3/protocol-v5/run-4/organcmnist/) and [run-5 results](results/poisoning/generation-v3/protocol-v5/run-5/organcmnist/) | [run-4 models](models/poisoning/generation-v3/protocol-v5/run-4/organcmnist/) and [run-5 models](models/poisoning/generation-v3/protocol-v5/run-5/organcmnist/) |
+| OrganSMNIST, protocol-v5 | [run-6 results](results/poisoning/generation-v3/protocol-v5/run-6/organsmnist/) | [run-6 models](models/poisoning/generation-v3/protocol-v5/run-6/organsmnist/) |
+
+OrganAMNIST run-1 has 170 result records, but three contain non-finite
+metrics/model parameters: seed 47 (4 clients, 50%), seed 48 (4 clients, 25%),
+and seed 50 (4 clients, 50%). The three run-2 reruns reproduce those failures;
+they are not additional observations. The primary analysis below uses the 167
+valid run-1 records and excludes those three cells. For OrganCMNIST, runs 4 and
+5 contain the complete 170-cell matrix. The 53 earlier records in runs 1–3 are
+partial attempts whose cells all also occur in runs 4–5; do not count them as
+extra observations. OrganSMNIST run-6 contains the complete 170-cell matrix.
+
+For each canonical matrix, all expected result and partition JSON files are
+present, and final-model and round-checkpoint references resolve. All
+OrganCMNIST and OrganSMNIST records report completed, valid runs, finite
+metrics and parameters, 20 client results and zero client failures in each of
+five rounds. Their validation metrics cover rounds 0–5. OrganAMNIST has the
+three numerical failures noted above. Test metrics are null throughout.
+
+### Round-5 validation analysis
+
+The primary endpoint is the targeted class-4→class-5 error rate: true
+kidney-left validation examples predicted as kidney-right. Clean and poisoned
+rates below are averages over the available seed/control and
+condition/seed records, respectively. Paired deltas compare each poisoned
+condition with its same-seed clean control. For the intervals, condition-level
+deltas are first averaged within each seed, then a two-sided 95% Student's
+*t* interval is calculated across the ten seed-level averages. OrganAMNIST
+seed averages exclude its affected cell where applicable (15 valid attack
+conditions for seeds 47, 48, and 50; 16 for the other seeds). Accuracy and
+macro-F1 use the same seed-paired calculation; macro-F1 is the unweighted
+mean over the 11 classes. Intervals are descriptive, not significance tests.
+
+| Dataset | Targeted error, clean → poisoned | Targeted-error Δ, pp (95% interval) | Accuracy Δ, pp (95% interval) | Macro-F1 Δ, pp (95% interval) |
+|---------|-----------------------------------:|-----------------------------------:|------------------------------:|------------------------------:|
+| OrganAMNIST | 3.87% → 13.31% | +9.47 (+6.85, +12.09) | -1.60 (-3.74, +0.54) | -2.50 (-5.86, +0.86) |
+| OrganCMNIST | 3.56% → 11.84% | +8.28 (+5.16, +11.41) | -0.97 (-2.16, +0.21) | -2.65 (-4.37, -0.92) |
+| OrganSMNIST | 11.07% → 16.32% | +5.25 (+1.60, +8.90) | +0.06 (-1.11, +1.22) | -0.38 (-1.97, +1.22) |
+
+The mean and interval do not show the full spread. Across the ten
+seed-averaged paired changes, and across individual condition-by-seed pairs,
+the targeted-error changes vary as follows:
+
+| Dataset | Seed-averaged Δ, mean (SD), range (pp) | Positive condition-seed changes |
+|---------|----------------------------------------:|---------------------------------:|
+| OrganAMNIST | +9.47 (3.67), +4.43 to +15.47 | 121/157 |
+| OrganCMNIST | +8.28 (4.37), +2.41 to +15.15 | 130/160 |
+| OrganSMNIST | +5.25 (5.10), 0.00 to +16.38 | 96/160 |
+
+The seed-level SD and range summarize variability after averaging the valid
+attack conditions within each seed. The positive counts instead describe
+individual condition-seed pairs relative to that seed's clean control; they
+are not independent replicates. OrganSMNIST therefore has a positive average
+but a smaller share of cells that increase the target error.
+
+### Source-class support and confusion slice
+
+The following is the round-5 validation confusion-matrix row for true
+kidney-left examples. Support is the number of true kidney-left examples in
+each run; prediction percentages are averaged over clean controls or valid
+poisoned records. “Other” combines predictions for the remaining nine
+classes.
+
+| Dataset | Source support per run | Clean: predicted kidney-left / kidney-right / other | Poisoned: predicted kidney-left / kidney-right / other |
+|---------|-----------------------:|----------------------------------------------------:|-------------------------------------------------------:|
+| OrganAMNIST | 568 | 81.11% / 3.87% / 15.02% | 61.70% / 13.31% / 24.98% |
+| OrganCMNIST | 132 | 29.32% / 3.56% / 67.12% | 15.92% / 11.84% / 72.23% |
+| OrganSMNIST | 140 | 4.29% / 11.07% / 84.64% | 1.25% / 16.32% / 82.43% |
+
+This row makes clear that the targeted error is only one part of source-class
+performance. In particular, clean OrganCMNIST and OrganSMNIST models already
+have low kidney-left recall, and most source-class errors on those datasets
+are predictions outside the target class.
+
+The targeted error increases across the three datasets. The condition-averaged
+paired increase also rises with poisoned-client count (1, 2, 4, then 8):
+OrganAMNIST +0.79, +2.90, +9.16, and +24.96 pp; OrganCMNIST +1.00, +4.41,
++8.33, and +19.38 pp; OrganSMNIST +0.30, +2.61, +6.29, and +11.80 pp.
+These summaries average over the four flip fractions and are descriptive.
+Overall-accuracy intervals include zero for all three datasets; the
+macro-F1 interval includes zero for OrganAMNIST and OrganSMNIST, but not
+OrganCMNIST. OrganSMNIST's clean baseline is comparatively weak (45.12%
+accuracy and 28.11% macro-F1), so cross-dataset differences in attack effect
+should be interpreted in that context.
+
+OrganAMNIST uses protocol-v3, whereas OrganCMNIST and OrganSMNIST use
+protocol-v5. Their recorded training settings and attack factors match, but
+cross-dataset comparisons are descriptive rather than a single
+same-protocol estimate. The successful cells have not all been repeated with
+the exact same seed/configuration; these results support cross-seed and
+cross-dataset consistency, not bit-for-bit run repeatability. Keep these
+result and model directories unchanged as the baseline for defense work.
+Continue to use validation for development and reserve test evaluation until
+the defense protocol and analysis are locked.
