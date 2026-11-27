@@ -50,11 +50,13 @@ Research Questions:
 - Label-flipping runs are preserved for defense evaluation; OrganAMNIST protocol-v3 analysis remains subject to three invalid cells
 - 507 valid unique condition-seed cells across three datasets (OrganAMNIST: 167 from protocol-v3, OrganCMNIST: 170 from protocol-v5, OrganSMNIST: 170 from protocol-v5)
 - Poisoning results and models are separated into `flipping` and reserved `overlay` directories. Overlay experiments and their protocol are forthcoming.
-- Next: Robust aggregation defense evaluation on the documented poisoning baselines
+- Exploratory validation-only defense comparison completed for the four-client, 100%-flip OrganAMNIST attack. All ten median attack runs are valid, but only nine have completed median-clean controls; the comparison also reuses historical FedAvg records without source/environment manifests.
+- Next: investigate and resolve the median-clean seed-49 non-finite update, freeze one matched defense protocol/source, then rerun clean and attack conditions for both aggregators before any final test evaluation.
 
 **Documentation:**
 - Detailed baseline results in [quickstart-pytorch/baseline_results.md](quickstart-pytorch/baseline_results.md)
 - Comprehensive poisoning results and protocol progression in [quickstart-pytorch/poisoning_results.md](quickstart-pytorch/poisoning_results.md)
+- Defense pilot and per-seed validation comparison in [quickstart-pytorch/defense_results.md](quickstart-pytorch/defense_results.md)
 - Quickstart instructions and running experiments in [quickstart-pytorch/README.md](quickstart-pytorch/README.md)
 
 ## References

@@ -365,6 +365,53 @@ The execution manifest records source hashes, Git state, and the Python and
 dependency environment. The run records retain partitions, checkpoints,
 validation metrics, client counts, and attack details.
 
+For an exploratory four-client, 100%-flip median comparison across seeds
+42–51, reuse the existing valid FedAvg attack/control pairs and median clean
+controls, and run only the new median poisoned conditions:
+
+```bash
+PROTOCOL_ID=protocol-v2 \
+SEEDS="42 43 44 45 46 47 48 49 50 51" \
+AGGREGATIONS=median \
+RUN_CLEAN_CONTROLS=false \
+POISON_NUM_CLIENTS=4 \
+POISON_FRACTION=1.0 \
+CONTINUE_ON_FAILURE=true \
+bash run_median_defense_pilot.sh
+```
+
+This writes a new execution under
+`results/defense/generation-v1/protocol-v2/run-N/` and the matching `models/`
+directory. The reused FedAvg four-client/100%-flip records and their clean
+controls are in
+`results/poisoning/flipping/generation-v3/protocol-v3/run-1/organamnist/`;
+their recorded settings and validity checks match, but their source and
+environment were not captured, so treat cross-protocol findings as
+exploratory. Existing median clean controls are valid for seeds 42–48 and
+50–51; seed 49 has no valid median-clean result and must be excluded from
+matched summaries; see the [seed-49 failure investigation and disposition](defense_results.md#seed-49-median-clean-failure-and-disposition).
+The initial median pilot's seeds 43–46 also predate the current source hashes.
+`CONTINUE_ON_FAILURE=true` attempts later seeds after a failed condition and
+exits nonzero with the failed conditions listed.
+
+The three invalid OrganAMNIST protocol-v3 cells at four poisoned clients and
+25–50% flips remain documented and excluded from completed-pair analyses; see
+[poisoning_results.md](poisoning_results.md).
+
+The protocol-v2 median attack runs completed for all ten seeds. On the nine
+seeds with median-clean controls, the mean poison-minus-clean changes were:
+targeted error +5.05 pp, kidney-left recall -14.55 pp, overall accuracy
+-2.06 pp, and validation loss +0.0738. The corresponding FedAvg changes were
++23.26 pp, -52.17 pp, -2.80 pp, and +0.0220. These are validation-only
+exploratory results: seed 49 lacks a completed median-clean control, seed 42's
+two valid median-clean records have identical round-5 metrics and are counted
+once, and the per-seed outcomes vary. In particular, do not infer general
+robustness from averages alone. Median-clean minus FedAvg-clean mean
+differences were +0.33 pp targeted error, +1.08 pp kidney-left recall,
++1.77 pp accuracy, and -0.0663 loss. The detailed per-seed clean differences,
+within-method attack changes, and median-minus-FedAvg attack-effect
+differences are in [defense_results.md](defense_results.md).
+
 Select `aggregation="median"` in a direct Flower run to use the defense with
 either baseline or label-flipping training; the default is `fedavg`. For each
 floating-point model coordinate, median sorts the client values and returns

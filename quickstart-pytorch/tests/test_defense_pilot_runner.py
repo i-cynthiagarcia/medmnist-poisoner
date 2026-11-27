@@ -18,7 +18,13 @@ class DefensePilotRunnerTests(unittest.TestCase):
         python = bin_dir / "python"
         python.write_text("#!/bin/sh\nexit 0\n")
         flwr = bin_dir / "flwr"
-        flwr.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$FLWR_CALLS"\n')
+        flwr.write_text(
+            '#!/bin/sh\n'
+            'printf "%s\\n" "$*" >> "$FLWR_CALLS"\n'
+            'if [ -n "${FLWR_FAIL_SEED:-}" ]; then\n'
+            '  case "$*" in *"seed=$FLWR_FAIL_SEED "*) exit 7 ;; esac\n'
+            'fi\n'
+        )
         python.chmod(0o755)
         flwr.chmod(0o755)
         self.calls = self.root / "calls.txt"
@@ -28,7 +34,19 @@ class DefensePilotRunnerTests(unittest.TestCase):
             "FLWR_CALLS": str(self.calls),
             "SEEDS": "42 43",
         }
-        for key in ("RESULTS_DIR", "MODELS_DIR", "GENERATION_ID", "PROTOCOL_ID", "EXECUTION_ID"):
+        for key in (
+            "RESULTS_DIR",
+            "MODELS_DIR",
+            "GENERATION_ID",
+            "PROTOCOL_ID",
+            "EXECUTION_ID",
+            "AGGREGATIONS",
+            "RUN_CLEAN_CONTROLS",
+            "POISON_NUM_CLIENTS",
+            "POISON_FRACTION",
+            "CONTINUE_ON_FAILURE",
+            "FLWR_FAIL_SEED",
+        ):
             self.env.pop(key, None)
 
     def run_script(self):
@@ -62,6 +80,43 @@ class DefensePilotRunnerTests(unittest.TestCase):
                     self.assertIn("aggregation-subdirectories=true", matches[0])
                     self.assertIn("poison-source-class-id=4", matches[0])
                     self.assertIn("poison-target-class-id=5", matches[0])
+
+    def test_runs_only_selected_poisoned_aggregation_when_controls_are_reused(self):
+        self.env.update(
+            SEEDS="49",
+            AGGREGATIONS="median",
+            RUN_CLEAN_CONTROLS="false",
+            POISON_NUM_CLIENTS="4",
+            POISON_FRACTION="1.0",
+        )
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        calls = self.calls.read_text().splitlines()
+        self.assertEqual(len(calls), 1)
+        self.assertIn('aggregation="median"', calls[0])
+        self.assertIn("seed=49 ", calls[0])
+        self.assertIn("poison-num-clients=4 ", calls[0])
+        self.assertIn("poison-fraction=1.0 ", calls[0])
+        self.assertIn("require-complete-round=true", calls[0])
+        self.assertIn("evaluate-test=false", calls[0])
+
+    def test_continue_on_failure_attempts_remaining_seeds_and_reports_failure(self):
+        self.env.update(
+            SEEDS="42 43",
+            AGGREGATIONS="median",
+            RUN_CLEAN_CONTROLS="false",
+            POISON_NUM_CLIENTS="4",
+            CONTINUE_ON_FAILURE="true",
+            FLWR_FAIL_SEED="42",
+        )
+        result = self.run_script()
+        self.assertNotEqual(result.returncode, 0)
+        calls = self.calls.read_text().splitlines()
+        self.assertEqual(len(calls), 2)
+        self.assertIn("seed=42 ", calls[0])
+        self.assertIn("seed=43 ", calls[1])
+        self.assertIn("seed=42 aggregation=median clients=4", result.stderr)
+        self.assertIn("Failed conditions:", result.stderr)
 
     def test_rejects_repeated_seeds_and_existing_execution(self):
         self.env["SEEDS"] = "42 42"
