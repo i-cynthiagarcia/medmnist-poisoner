@@ -57,16 +57,16 @@ If you already created a virtual environment, check its version with
 `python -m pip install -e .` from `quickstart-pytorch/`, and use the same
 activated environment in the terminal where you run Flower.
 
-The Python package keeps reusable components in
-`pytorchexample/shared/` (data, partitions, model, training, metrics, and
-artifacts) and experiment entry points in
-`pytorchexample/experiments/<experiment>/`. The baseline Flower client/server
-apps and centralized runner are grouped in
-`pytorchexample/experiments/baseline/`.
-The label-flipping Flower apps live in
-`pytorchexample/experiments/poisoning/`; reusable Flower handlers are in
-`pytorchexample/experiments/shared/`. The project-level Flower app dispatches
-between baseline and poisoning using the `experiment-type` run-config value.
+The Python package keeps reusable data, model, training, metrics, and artifact
+components in `pytorchexample/shared/`. The Flower components configured in
+`pyproject.toml` are the client and server dispatchers directly in
+`pytorchexample/experiments/`; they select baseline or label-flipping behavior
+using `experiment-type`. Reusable Flower handlers and FedAvg reply validation
+live in `pytorchexample/experiments/shared/`. Label-flipping logic lives in
+`pytorchexample/experiments/poisoning/`, and median aggregation lives in
+`pytorchexample/experiments/defense/`. The `aggregation` setting selects the
+server strategy independently of attack type. The baseline directory contains
+the centralized runner.
 
 ## Run the project
 
@@ -338,6 +338,53 @@ training settings. Once the protocol is fixed, set `evaluate-test=true` to
 evaluate the final model once on the official test split; those metrics are
 recorded separately from per-round validation metrics. Do not use test metrics
 to select training settings.
+
+### OrganAMNIST median defense pilot
+
+From `quickstart-pytorch/`, run the validation-only pilot with:
+
+```bash
+bash run_median_defense_pilot.sh
+```
+
+The pilot runs seeds 42–46, each with four matched conditions: clean and
+targeted label-flipping under FedAvg and under coordinate-wise median. It
+uses 20 clients, five rounds, one local epoch, learning rate 0.1, and batch
+size 32. The attack flips all kidney-left (class 4) labels on one
+seed-selected client to kidney-right (class 5), in every round. Seed, model
+initialization, partition, and attack selection are matched across conditions.
+`SEEDS="42 43"` selects a smaller pilot. Results and models default to
+`results/defense/generation-v1/protocol-v1/run-N/` and the matching `models/`
+directory; `GENERATION_ID`, `PROTOCOL_ID`, `EXECUTION_ID`, `RESULTS_DIR`, and
+`MODELS_DIR` override those values. An existing execution is never overwritten.
+Within each execution, `fedavg/` and `median/` contain their respective
+matched condition outputs, under each dataset and experiment. Direct Flower
+runs can opt into this layout with `aggregation-subdirectories=true`; the
+default remains the existing ungrouped layout for baseline and poisoning runs.
+The execution manifest records source hashes, Git state, and the Python and
+dependency environment. The run records retain partitions, checkpoints,
+validation metrics, client counts, and attack details.
+
+Select `aggregation="median"` in a direct Flower run to use the defense with
+either baseline or label-flipping training; the default is `fedavg`. For each
+floating-point model coordinate, median sorts the client values and returns
+the middle value for an odd number of clients or the arithmetic mean of the
+two middle values for an even number. Thus for 20 clients it averages the
+10th and 11th ordered values. It weights clients equally, unlike FedAvg's
+training-example weighting, and is not guaranteed to select an actual client
+model. Median requires all configured clients to return finite, compatible
+model arrays; failed or missing replies abort the round. The pilot also
+requires complete, finite replies for its FedAvg controls. Client training
+metrics remain example-weighted for both strategies; this does not change
+the equal-client weighting of median model aggregation.
+
+Compare the poison-minus-clean change within each aggregation rule, along
+with the clean performance cost of median. Inspect targeted validation error,
+source-class recall, accuracy, loss, and per-seed values. These few seeds and
+reused validation data support exploratory conclusions only; neither the
+pilot nor its configuration selects or evaluates against the test split.
+The completed five-seed pilot and its validation outcomes are summarized in
+[defense_results.md](defense_results.md).
 
 By default, a direct Flower run uses `generation-v3/protocol-v1` and
 automatically selects the next available `run-N` beneath `results/baseline/`

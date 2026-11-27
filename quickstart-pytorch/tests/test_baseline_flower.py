@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -6,24 +7,51 @@ import torch
 from flwr.app import ArrayRecord, ConfigRecord, Message, RecordDict
 from torch.utils.data import DataLoader, TensorDataset
 
-from pytorchexample.experiments.baseline import client_app, server_app
+from pytorchexample.experiments import (
+    client_app as experiment_client_app,
+    server_app as experiment_server_app,
+)
 from pytorchexample.experiments.shared import client as shared_client
 from pytorchexample.shared.model import Net
 
 
 class BaselineFlowerRegressionTests(unittest.TestCase):
-    def test_baseline_client_entry_point_uses_shared_clean_default(self):
-        message = Mock()
+    def test_flower_components_use_experiment_dispatchers(self):
+        project = Path(__file__).resolve().parents[1] / "pyproject.toml"
+        contents = project.read_text()
+        self.assertIn('clientapp = "pytorchexample.experiments.client_app:app"', contents)
+        self.assertIn('serverapp = "pytorchexample.experiments.server_app:app"', contents)
+
+    def test_dispatchers_keep_attack_and_aggregation_independent(self):
+        for experiment_type, poisoned in (("baseline", False), ("label-flipping", True)):
+            for aggregation in ("fedavg", "median"):
+                with self.subTest(experiment_type=experiment_type, aggregation=aggregation):
+                    context = Mock()
+                    context.run_config = {
+                        "experiment-type": experiment_type,
+                        "aggregation": aggregation,
+                    }
+                    message, grid = Mock(), Mock()
+                    with (
+                        patch.object(experiment_client_app, "train_client") as train,
+                        patch.object(experiment_server_app, "run_server") as server,
+                    ):
+                        experiment_client_app.train(message, context)
+                        experiment_server_app.main(grid, context)
+                    train.assert_called_once_with(
+                        message, context, label_flipping_enabled=poisoned
+                    )
+                    server.assert_called_once_with(
+                        grid, context, label_flipping_enabled=poisoned
+                    )
+
+    def test_dispatchers_reject_unknown_experiment_type(self):
         context = Mock()
-        expected = object()
-
-        with patch.object(
-            client_app, "train_client", return_value=expected
-        ) as train_client:
-            result = client_app.train(message, context)
-
-        self.assertIs(result, expected)
-        train_client.assert_called_once_with(message, context)
+        context.run_config = {"experiment-type": "overlay"}
+        with self.assertRaises(ValueError):
+            experiment_client_app.train(Mock(), context)
+        with self.assertRaises(ValueError):
+            experiment_server_app.main(Mock(), context)
 
     def test_shared_client_trains_without_poisoning_configuration(self):
         initial_model = Net()
@@ -85,16 +113,6 @@ class BaselineFlowerRegressionTests(unittest.TestCase):
         returned_state = reply.content["arrays"].to_torch_state_dict()
         for key, value in initial_state.items():
             self.assertTrue(torch.equal(returned_state[key], value))
-
-    def test_baseline_server_entry_point_uses_shared_clean_default(self):
-        grid = Mock()
-        context = Mock()
-
-        with patch.object(server_app, "run_server") as run_server:
-            server_app.main(grid, context)
-
-        run_server.assert_called_once_with(grid, context)
-
 
 if __name__ == "__main__":
     unittest.main()
