@@ -1,6 +1,89 @@
-# OrganAMNIST median defense pilot
+# OrganAMNIST defense results
 
-## Status and protocol
+## 0.01 learning-rate pilot
+
+The validation-only stability pilot completed all 12 conditions: seeds 42,
+49, and 50, each with clean and four-client, 100%-flip runs under FedAvg and
+coordinate-wise median. All records report five complete rounds with 20
+successful replies, no client failures, finite metrics and model parameters,
+and valid runs. All partition manifests verify disjoint, complete assignments;
+the four conditions for each seed used the same partition, and the two
+attacks selected the same clients. All five recorded round checkpoints and the
+final model file are present for each run. Test evaluation was disabled.
+
+The pilot used the CNN, 20 clients, five rounds, one local epoch, batch size 32,
+learning rate 0.01, and the kidney-left-to-kidney-right label-flipping attack.
+The manifest records a clean working tree at revision
+`a2f99fa0ac45def92a24d376fff5a4884f71cb26`; its recorded source hashes match
+the current files. Results, partition manifests and execution manifest are in
+[`protocol-v3/run-1/`](results/defense/generation-v1/protocol-v3/run-1/);
+models and checkpoints are in the matching
+[`models/` execution](models/defense/generation-v1/protocol-v3/run-1/).
+
+### 0.01 round-5 validation outcomes
+
+Targeted error is the percentage of kidney-left images predicted as
+kidney-right. Kidney-left recall measures correct predictions for that class.
+All values are percentages.
+
+| Seed | Aggregation | Clean accuracy | Attacked accuracy | Clean targeted error | Attacked targeted error | Clean recall | Attacked recall |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 42 | FedAvg | 75.26 | 74.73 | 6.34 | 18.13 | 70.42 | 35.92 |
+| 42 | Median | 75.43 | 75.67 | 5.99 | 10.92 | 70.07 | 60.04 |
+| 49 | FedAvg | 74.13 | 72.65 | 5.81 | 34.15 | 74.47 | 23.77 |
+| 49 | Median | 73.86 | 74.77 | 6.51 | 12.15 | 74.47 | 59.51 |
+| 50 | FedAvg | 80.26 | 77.71 | 7.39 | 29.23 | 77.46 | 33.10 |
+| 50 | Median | 80.08 | 79.42 | 7.57 | 18.49 | 78.35 | 58.98 |
+
+Mean clean accuracy was 76.55% for FedAvg and 76.45% for median. Seed 49's
+median-clean run completed at 0.01, unlike the earlier 0.1 attempt. These three
+selected seeds give preliminary evidence, not proof of stability or a general
+robustness claim. The 0.01 results are a separate protocol and must not be
+pooled with the historical 0.1 results below.
+
+### Frozen OrganAMNIST comparison protocol
+
+The OrganAMNIST validation comparison uses learning rate 0.01, seeds 42–51,
+20 clients, five rounds, one local epoch and batch size 32. For each seed,
+run FedAvg and median, each clean and with four poisoned clients flipping
+100% of kidney-left labels to kidney-right. Run all 40 conditions afresh
+from one committed source and captured environment; do not reuse pilot runs.
+
+The primary metric is the per-seed difference in attack-induced targeted
+error: `(median attacked - median clean) - (FedAvg attacked - FedAvg clean)`.
+Report the mean and each seed's value in percentage points; a negative
+difference favors median. Also report each method's paired attack change,
+clean accuracy and median-minus-FedAvg clean difference, kidney-left recall,
+validation loss, and per-seed outcomes.
+
+The clean-performance floor is **75% mean final-round validation accuracy
+separately for each aggregation across all ten seeds**. Compare unrounded
+means with the floor; this is a practical criterion, not a stability or
+generalization guarantee. Individual seeds may fall below 75%: report them
+and class-level recall rather than excluding them. Assess the ten-seed floor
+only when all ten clean results for that aggregation are valid, and report an
+incomplete comparison separately.
+
+Require all 40 valid conditions for a complete comparison. The runner must
+report failures and continue with the remaining conditions. Preserve failed
+records and logs; retry a condition at most once only if the failure is
+clearly attributable to infrastructure, using the same seed, configuration,
+source and environment and retaining a separate execution and its manifest.
+Document the reason and both attempts; count a successful retry only once.
+Do not silently replace numerical failures or omit seeds. If any condition
+remains invalid, report the missing cells and any complete pairs as
+exploratory, not as a complete ten-seed comparison. Do not treat an unpaired
+condition as a pair.
+
+Seeds 42–51 are also the proposed harmonized set for OrganCMNIST and
+OrganSMNIST. Each needs its own stability and clean-performance checks before
+adopting settings; this OrganAMNIST pilot does not establish that 0.01 is
+suitable for them. Keep test evaluation disabled for the OrganAMNIST
+comparison; see the [run instructions](README.md#001-organamnist-comparison).
+
+## Historical 0.1 learning-rate pilot
+
+### Status and protocol
 
 The validation-only pilot completed 20 runs: seeds 42–46, each with clean and
 poisoned FedAvg and clean and poisoned coordinate-wise median. All runs
@@ -32,7 +115,7 @@ hashes identify source contents but cannot reconstruct them. The environment
 and deterministic settings support reproducibility but
 do not guarantee bitwise-identical results across hardware or software.
 
-## Round-5 validation outcomes
+### Round-5 validation outcomes
 
 Targeted error is the fraction of true kidney-left validation images predicted
 as kidney-right. Each seed has 568 such images. Values below are percentages.
@@ -69,7 +152,7 @@ and a previously used validation set, not evidence of general protection.
 Do not use the test split until the broader attack and defense protocols are
 fixed.
 
-## Verification after code reorganization
+### Verification after code reorganization
 
 The full existing test suite passed all 52 tests on the reorganized code,
 including the 20-client even median and rejection of missing, duplicate,
@@ -216,7 +299,7 @@ an exploratory, metric-specific comparison, not a general robustness claim.
 
 The reused FedAvg records have no source/environment manifest, and median
 clean controls for seeds 43–46 predate the current source hashes. The median
-clean seed-49 failure is unresolved. Keep the three invalid protocol-v3
+clean seed-49 failure at 0.1 remains unresolved. Keep the three invalid protocol-v3
 four-client 25–50% cells excluded as documented in
 [`poisoning_results.md`](poisoning_results.md). Use validation only until the
 final matched protocol and source are fixed; evaluate the test split only
