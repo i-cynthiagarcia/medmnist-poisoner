@@ -37,13 +37,25 @@ Research Questions:
 
 ## Status
 
-**Milestone 1 (current):**
-- Literature review on FL data-poisoning attacks and defenses completed
-- Dataset and tool choices finalized (MedMNIST + Flower + PyTorch)
-- Research question narrowed based on professor feedback
-- Data preprocessing pipeline defined (MedMNIST train/test split, pixel normalization)
-- 20-client uniform partitioning scheme defined
-- Evaluation protocol for the clean federated baseline (FedAvg, no poisoning) defined
+**Completed Baselines:**
+- ✅ **Clean federated baseline** (generation-v3, protocol-v1) — 105 runs across OrganAMNIST, OrganCMNIST, and OrganSMNIST with 5 seeds each; best configurations identified per dataset with seed extensions (42–51)
+- ✅ **Label-flipping experiment executions** (generation-v3, protocols v1–v5) — 659 run records and 660 partition manifests across the three datasets:
+  - Protocol-v1: Single-client 100%-flip trials (3 datasets × 5 seeds)
+  - Protocol-v2: Dose-response sweep, 1 attacker (OrganAMNIST, 10 seeds)
+  - Protocol-v3: Factorial matrix 1,2,4,8 attackers × 4 flip fractions (OrganAMNIST, 10 seeds; 3 known numerical instabilities at 4-attacker level)
+  - Protocol-v4: Stability pilot (OrganCMNIST/OrganSMNIST, confirming same training settings handle the extreme attack conditions)
+  - Protocol-v5: Full factorial matrices (OrganCMNIST 223 run records including partial attempts, OrganSMNIST 170 run records; 10 seeds each in the complete matrices)
+
+**Current milestone:**
+- Label-flipping runs are preserved for defense evaluation; OrganAMNIST protocol-v3 analysis remains subject to three invalid cells
+- 507 valid unique condition-seed cells across three datasets (OrganAMNIST: 167 from protocol-v3, OrganCMNIST: 170 from protocol-v5, OrganSMNIST: 170 from protocol-v5)
+- Poisoning results and models are separated into `flipping` and reserved `overlay` directories. Overlay experiments and their protocol are forthcoming.
+- Next: Robust aggregation defense evaluation on the documented poisoning baselines
+
+**Documentation:**
+- Detailed baseline results in [quickstart-pytorch/baseline_results.md](quickstart-pytorch/baseline_results.md)
+- Comprehensive poisoning results and protocol progression in [quickstart-pytorch/poisoning_results.md](quickstart-pytorch/poisoning_results.md)
+- Quickstart instructions and running experiments in [quickstart-pytorch/README.md](quickstart-pytorch/README.md)
 
 ## References
 
