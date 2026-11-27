@@ -51,7 +51,8 @@ Research Questions:
 - 507 valid unique condition-seed cells across three datasets (OrganAMNIST: 167 from protocol-v3, OrganCMNIST: 170 from protocol-v5, OrganSMNIST: 170 from protocol-v5)
 - Poisoning results and models are separated into `flipping` and reserved `overlay` directories. Overlay experiments and their protocol are forthcoming.
 - Exploratory validation-only defense comparison completed for the four-client, 100%-flip OrganAMNIST attack. All ten median attack runs are valid, but only nine have completed median-clean controls; the comparison also reuses historical FedAvg records without source/environment manifests.
-- Next: investigate and resolve the median-clean seed-49 non-finite update, freeze one matched defense protocol/source, then rerun clean and attack conditions for both aggregators before any final test evaluation.
+- A 12-run OrganAMNIST pilot at learning rate 0.01 completed, including the previously failing median-clean seed 49. The pilot does not prove stability; see the [pilot results and frozen comparison protocol](quickstart-pytorch/defense_results.md#001-learning-rate-pilot).
+- Next: commit the intended source and run the frozen OrganAMNIST comparison across seeds 42–51, with both aggregators and conditions. Check OrganCMNIST and OrganSMNIST separately before adopting settings for them; reserve test evaluation for a separate decision.
 
 **Documentation:**
 - Detailed baseline results in [quickstart-pytorch/baseline_results.md](quickstart-pytorch/baseline_results.md)
