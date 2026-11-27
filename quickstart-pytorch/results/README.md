@@ -63,6 +63,23 @@ experiment parameters, metrics, and protocol IDs did not change. The original
 paths and records remain available in Git history. Overlay is reserved for
 future work; no overlay protocol or results are implied by its directory.
 
+## Defense results
+
+The first validation-only OrganAMNIST median pilot is described in
+[defense_results.md](../defense_results.md). Its matched FedAvg and median
+runs, manifest, and checkpoints use defense `generation-v1/protocol-v1/run-1`.
+Within that execution, results and models are grouped by aggregation:
+
+```text
+results/defense/generation-vN/protocol-vN/run-N/<fedavg|median>/<dataset>/<experiment>/
+models/defense/generation-vN/protocol-vN/run-N/<fedavg|median>/<dataset>/<experiment>/
+```
+
+The pilot execution was migrated to this layout without rerunning training;
+run-record artifact references were updated. The original execution manifest
+and its historical source hashes are unchanged. Direct Flower runs use this
+layout only when `aggregation-subdirectories=true`.
+
 PyTorch checkpoints under `quickstart-pytorch/models/` are tracked with Git
 LFS. Collaborators need Git LFS installed and repository read access to fetch
 the checkpoint contents. The LFS pointer and `.gitattributes` rules are stored

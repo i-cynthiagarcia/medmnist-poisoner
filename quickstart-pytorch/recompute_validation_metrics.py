@@ -3,6 +3,7 @@
 import argparse
 import json
 import math
+import re
 from pathlib import Path
 
 import torch
@@ -44,6 +45,26 @@ def metrics_match(expected, actual, tolerance: float = 1e-9) -> bool:
     return expected == actual
 
 
+def model_directory_for_record(record: dict, models_dir: Path) -> Path:
+    """Resolve legacy and aggregation-grouped model layouts."""
+    model_dir = models_dir / record.get("generation_id", "generation-v2")
+    if record.get("protocol_id") is not None:
+        model_dir /= record["protocol_id"]
+    if record.get("execution_id") is not None:
+        model_dir /= record["execution_id"]
+    layout = record.get("artifact_layout")
+    if layout == "aggregation_subdirectories":
+        aggregation_id = record.get("aggregation_id")
+        if not isinstance(aggregation_id, str) or not re.fullmatch(
+            r"[a-z0-9][a-z0-9_-]*", aggregation_id
+        ):
+            raise ValueError("Invalid aggregation_id in grouped run record.")
+        model_dir /= aggregation_id
+    elif layout is not None:
+        raise ValueError(f"Unknown artifact layout: {layout!r}")
+    return model_dir / record["dataset"] / record["experiment"]
+
+
 def recompute_final_metrics(
     results_dir: Path, models_dir: Path
 ) -> list[tuple[Path, dict, dict, dict | None]]:
@@ -60,17 +81,8 @@ def recompute_final_metrics(
         record = json.loads(result_path.read_text())
         stored_metrics = record["metrics"].get("validation_final_recomputed")
         dataset = record["dataset"]
-        experiment = record["experiment"]
         seed = record["seed"]
-        generation_id = record.get("generation_id", "generation-v2")
-        model_dir = models_dir / generation_id
-        protocol_id = record.get("protocol_id")
-        if protocol_id is not None:
-            model_dir /= protocol_id
-        execution_id = record.get("execution_id")
-        if execution_id is not None:
-            model_dir /= execution_id
-        model_dir = model_dir / dataset / experiment
+        model_dir = model_directory_for_record(record, models_dir)
         run_id = record.get("run_id")
         model_path = (
             model_dir / f"{run_artifact_stem(seed, run_id)}.pt"

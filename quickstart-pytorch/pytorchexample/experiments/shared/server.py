@@ -1,13 +1,16 @@
 """pytorchexample: A Flower / PyTorch app."""
 
 import json
-import math
 from pathlib import Path
 
 import torch
 from flwr.app import ArrayRecord, ConfigRecord, Context, MetricRecord
 from flwr.serverapp import Grid
-from flwr.serverapp.strategy import FedAvg
+from pytorchexample.experiments.defense.median import VerifiedMedian
+from pytorchexample.experiments.shared.aggregation import (
+    VerifiedFedAvg,
+    contains_only_finite_values as _contains_only_finite_values,
+)
 
 from pytorchexample.shared.config import (
     require_config_float,
@@ -28,7 +31,7 @@ from pytorchexample.shared.data import (
     load_centralized_dataset,
 )
 from pytorchexample.shared.model import Net
-from pytorchexample.experiments.shared.label_flipping import (
+from pytorchexample.experiments.poisoning.label_flipping import (
     select_poisoned_clients,
     validate_label_flip_config,
 )
@@ -37,36 +40,6 @@ from pytorchexample.shared.training import (
     set_seed,
 )
 from pytorchexample.shared.visualization import save_confusion_matrix_plot
-
-
-def _contains_only_finite_values(value: object) -> bool:
-    if isinstance(value, torch.Tensor):
-        return bool(torch.isfinite(value).all().item())
-    if isinstance(value, dict):
-        return all(_contains_only_finite_values(item) for item in value.values())
-    if isinstance(value, (list, tuple)):
-        return all(_contains_only_finite_values(item) for item in value)
-    if isinstance(value, float):
-        return math.isfinite(value)
-    return True
-
-
-class VerifiedFedAvg(FedAvg):
-    """FedAvg variant that records per-round client reply counts."""
-
-    def __init__(self, num_clients: int, **kwargs):
-        super().__init__(**kwargs)
-        self.num_clients = num_clients
-        self.received_by_round = {}
-        self.failed_by_round = {}
-
-    def aggregate_train(self, server_round, replies):
-        replies = list(replies)
-        received = sum(1 for reply in replies if not reply.has_error())
-        failed = sum(1 for reply in replies if reply.has_error())
-        self.received_by_round[server_round] = received
-        self.failed_by_round[server_round] = failed
-        return super().aggregate_train(server_round, replies)
 
 
 def experiment_name(
@@ -107,15 +80,46 @@ def experiment_name_for_context(
         config["learning-rate"],
     )
     if not label_flipping_enabled:
-        return experiment_name(*arguments)
-    return experiment_name(
-        *arguments,
-        label_flipping_enabled=True,
-        poison_num_clients=config["poison-num-clients"],
-        poison_fraction=config["poison-fraction"],
-        source_class_id=config["poison-source-class-id"],
-        target_class_id=config["poison-target-class-id"],
+        name = experiment_name(*arguments)
+    else:
+        name = experiment_name(
+            *arguments,
+            label_flipping_enabled=True,
+            poison_num_clients=config["poison-num-clients"],
+            poison_fraction=config["poison-fraction"],
+            source_class_id=config["poison-source-class-id"],
+            target_class_id=config["poison-target-class-id"],
+        )
+    return f"median_{name}" if aggregation_for_context(context) == "median" else name
+
+
+def aggregation_for_context(context: Context) -> str:
+    """Validate the configured server aggregation rule."""
+    aggregation = require_config_string(
+        context.run_config.get("aggregation", "fedavg"), "aggregation"
     )
+    if aggregation not in {"fedavg", "median"}:
+        raise ValueError("aggregation must be either 'fedavg' or 'median'.")
+    return aggregation
+
+
+def experiment_output_dir(
+    context: Context,
+    root_key: str,
+    generation_id: str,
+    protocol_id: str,
+    execution_id: str,
+    experiment: str,
+) -> Path:
+    """Resolve a run directory, optionally grouped by aggregation strategy."""
+    grouped = context.run_config.get("aggregation-subdirectories", False)
+    if not isinstance(grouped, bool):
+        raise TypeError("Configuration value 'aggregation-subdirectories' must be a boolean.")
+    base = Path(context.run_config[root_key]) / generation_id / protocol_id / execution_id
+    if grouped:
+        base /= aggregation_for_context(context)
+    dataset = require_config_string(context.run_config["dataset"], "dataset")
+    return base / dataset / experiment
 
 
 def targeted_source_to_target_metrics(
@@ -142,25 +146,14 @@ def ensure_run_outputs_unused(
     execution_id: str,
 ) -> None:
     """Fail before training if any output for this run ID already exists."""
-    dataset = require_config_string(context.run_config["dataset"], "dataset")
     seed = context.run_config["seed"]
     run_id = context.run_id
     artifact_stem = run_artifact_stem(seed, run_id)
-    result_dir = (
-        Path(context.run_config["results-dir"])
-        / generation_id
-        / protocol_id
-        / execution_id
-        / dataset
-        / experiment
+    result_dir = experiment_output_dir(
+        context, "results-dir", generation_id, protocol_id, execution_id, experiment
     )
-    model_dir = (
-        Path(context.run_config["models-dir"])
-        / generation_id
-        / protocol_id
-        / execution_id
-        / dataset
-        / experiment
+    model_dir = experiment_output_dir(
+        context, "models-dir", generation_id, protocol_id, execution_id, experiment
     )
     paths = (
         result_dir / f"{artifact_stem}.json",
@@ -186,16 +179,11 @@ def save_partition_manifest(
     label_flipping_enabled: bool = False,
 ) -> Path:
     """Save verified client partition sizes and class counts before training."""
-    dataset = require_config_string(context.run_config["dataset"], "dataset")
     seed = context.run_config["seed"]
     run_id = context.run_id
-    result_dir = (
-        Path(context.run_config["results-dir"])
-        / generation_id
-        / protocol_id
-        / execution_id
-        / dataset
-        / experiment_name_for_context(context, label_flipping_enabled)
+    result_dir = experiment_output_dir(
+        context, "results-dir", generation_id, protocol_id, execution_id,
+        experiment_name_for_context(context, label_flipping_enabled),
     )
     artifact_stem = run_artifact_stem(seed, run_id)
     manifest_path = result_dir / f"partition-{artifact_stem}.json"
@@ -226,20 +214,14 @@ def save_round_checkpoint(
     label_flipping_enabled: bool = False,
 ) -> Path:
     """Save aggregated global weights for one completed server round."""
-    dataset = require_config_string(context.run_config["dataset"], "dataset")
     seed = context.run_config["seed"]
     run_id = context.run_id
     experiment = experiment_name_for_context(context, label_flipping_enabled)
     artifact_stem = run_artifact_stem(seed, run_id)
     checkpoint_dir = (
-        Path(context.run_config["models-dir"])
-        / generation_id
-        / protocol_id
-        / execution_id
-        / dataset
-        / experiment
-        / "checkpoints"
-        / artifact_stem
+        experiment_output_dir(
+            context, "models-dir", generation_id, protocol_id, execution_id, experiment
+        ) / "checkpoints" / artifact_stem
     )
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_path = checkpoint_dir / f"round-{server_round:03d}.pt"
@@ -273,23 +255,14 @@ def save_run_result(
     experiment = experiment_name_for_context(context, label_flipping_enabled)
     artifact_stem = run_artifact_stem(seed, run_id)
     class_names = get_class_names(dataset)
-    result_dir = (
-        Path(context.run_config["results-dir"])
-        / generation_id
-        / protocol_id
-        / execution_id
-        / dataset
-        / experiment
+    result_dir = experiment_output_dir(
+        context, "results-dir", generation_id, protocol_id, execution_id, experiment
     )
     result_path = result_dir / f"{artifact_stem}.json"
     model_artifact = (
-        Path(context.run_config["models-dir"])
-        / generation_id
-        / protocol_id
-        / execution_id
-        / dataset
-        / experiment
-        / f"{artifact_stem}.pt"
+        experiment_output_dir(
+            context, "models-dir", generation_id, protocol_id, execution_id, experiment
+        ) / f"{artifact_stem}.pt"
     )
     if result_path.exists():
         raise FileExistsError(
@@ -452,7 +425,19 @@ def save_run_result(
             if context.run_config["save-model"]
             else None
         ),
-        "aggregation": "FedAvg",
+        "aggregation": (
+            "coordinate-wise median"
+            if aggregation_for_context(context) == "median"
+            else "FedAvg"
+        ),
+        **(
+            {
+                "artifact_layout": "aggregation_subdirectories",
+                "aggregation_id": aggregation_for_context(context),
+            }
+            if context.run_config.get("aggregation-subdirectories", False)
+            else {}
+        ),
         "seed": seed,
         "loss_aggregation": "per_image",
         "configuration": {
@@ -467,6 +452,15 @@ def save_run_result(
             "learning_rate": learning_rate,
             "batch_size": context.run_config["batch-size"],
             "fraction_evaluate": context.run_config["fraction-evaluate"],
+            "require_complete_round": strategy.require_complete_round,
+            **(
+                {
+                    "median_rule": "coordinate-wise; even count averages two middle values",
+                    "aggregation_client_weighting": "equal_clients",
+                }
+                if aggregation_for_context(context) == "median"
+                else {}
+            ),
             **(
                 {"label_flipping": label_flipping}
                 if label_flipping is not None
@@ -582,12 +576,21 @@ def run_server(
     global_model = Net()
     arrays = ArrayRecord(global_model.state_dict())
 
-    # Initialize FedAvg strategy
-    strategy = VerifiedFedAvg(
+    aggregation = aggregation_for_context(context)
+    require_complete_round = context.run_config.get("require-complete-round", False)
+    if not isinstance(require_complete_round, bool):
+        raise TypeError("Configuration value 'require-complete-round' must be a boolean.")
+    strategy_class = VerifiedMedian if aggregation == "median" else VerifiedFedAvg
+    strategy_options = (
+        {} if aggregation == "median"
+        else {"require_complete_round": require_complete_round}
+    )
+    strategy = strategy_class(
         num_clients=num_clients,
         fraction_train=1.0,
         fraction_evaluate=fraction_evaluate,
         min_train_nodes=num_clients,
+        **strategy_options,
     )
 
     round_checkpoint_paths = {}
@@ -605,7 +608,7 @@ def run_server(
             )
         return evaluate_arrays(arrays, "val", dataset)
 
-    # Start strategy, run FedAvg for `num_rounds`
+    # Start the configured aggregation strategy.
     result = strategy.start(
         grid=grid,
         initial_arrays=arrays,
@@ -634,13 +637,8 @@ def run_server(
     print(f"\nSaving run results to {result_path}...")
 
     if context.run_config["save-model"]:
-        model_dir = (
-            Path(context.run_config["models-dir"])
-            / generation_id
-            / protocol_id
-            / execution_id
-            / dataset
-            / experiment
+        model_dir = experiment_output_dir(
+            context, "models-dir", generation_id, protocol_id, execution_id, experiment
         )
         model_dir.mkdir(parents=True, exist_ok=True)
         artifact_stem = run_artifact_stem(seed, context.run_id)

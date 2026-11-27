@@ -29,8 +29,8 @@ flwr-version-target = "1.30.0"
 fab-include = ["pytorchexample/**/*.py", "/README.md", "/LICENSE"]
 
 [tool.flwr.app.components]
-serverapp = "pytorchexample.experiments.shared.server_app:app"
-clientapp = "pytorchexample.experiments.shared.client_app:app"
+serverapp = "pytorchexample.experiments.server_app:app"
+clientapp = "pytorchexample.experiments.client_app:app"
 
 [tool.flwr.app.config]
 dataset = "organamnist"
@@ -49,6 +49,9 @@ execution-id = "auto"
 results-dir = "results/baseline"
 models-dir = "models/baseline"
 experiment-type = "baseline"
+aggregation = "fedavg"
+aggregation-subdirectories = false
+require-complete-round = false
 poison-num-clients = 0
 poison-fraction = 0.0
 poison-source-class-id = -1

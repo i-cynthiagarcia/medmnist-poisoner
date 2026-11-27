@@ -10,7 +10,7 @@ from pytorchexample.shared.config import (
 )
 from pytorchexample.shared.data import get_class_names, load_data
 from pytorchexample.shared.model import Net
-from pytorchexample.experiments.shared.label_flipping import (
+from pytorchexample.experiments.poisoning.label_flipping import (
     make_label_flip_transform,
     select_poisoned_clients,
     validate_label_flip_config,
