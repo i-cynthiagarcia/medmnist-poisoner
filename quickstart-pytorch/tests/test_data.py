@@ -8,7 +8,7 @@ from pytorchexample.shared.data import (
     get_class_names,
     verify_partition_indices,
 )
-from pytorchexample.experiments.shared.label_flipping import (
+from pytorchexample.experiments.poisoning.label_flipping import (
     LabelFlippedDataset,
     make_label_flip_transform,
     select_flipped_positions,
