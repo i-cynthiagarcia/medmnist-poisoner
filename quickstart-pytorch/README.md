@@ -412,6 +412,77 @@ differences were +0.33 pp targeted error, +1.08 pp kidney-left recall,
 within-method attack changes, and median-minus-FedAvg attack-effect
 differences are in [defense_results.md](defense_results.md).
 
+#### Candidate stability protocol: validation first
+
+The seed-49 diagnostic suggests trying learning rate 0.01, but it does not
+establish that a full federated run is stable. The following **candidate**, not
+a frozen or validated protocol, applies that rate to all four conditions.
+It retains the existing five rounds, one local epoch, batch size 32, 20 clients,
+and kidney-left-to-kidney-right attack. Seeds 42 and 50 provide two previously
+completed controls; seed 49 probes the observed failure. This is a 12-run
+validation-only pilot, not a replacement for the existing nine-seed evidence.
+
+Before running, commit the intended source and check `git status --short` and
+`git rev-parse HEAD`. Use the same committed source and environment for every
+condition; confirm `command -v python` and `command -v flwr` point to the
+same activated environment, and do not edit the source or dependencies during
+an execution. The
+manifest records the revision, working-tree status, source hashes and
+`pip freeze`; inspect these alongside the results. The script creates its
+output directories before recording status, so new output directories may
+appear as untracked. Capture the console log as well, including failures:
+
+```bash
+set -o pipefail
+log=$(mktemp "$HOME/organa-lr001-pilot.XXXXXX.log")
+GENERATION_ID=generation-v1 PROTOCOL_ID=protocol-v3 EXECUTION_ID="" \
+RESULTS_DIR=results/defense MODELS_DIR=models/defense \
+SEEDS="42 49 50" AGGREGATIONS="fedavg median" RUN_CLEAN_CONTROLS=true \
+LEARNING_RATE=0.01 POISON_NUM_CLIENTS=4 POISON_FRACTION=1.0 \
+CONTINUE_ON_FAILURE=true bash run_median_defense_pilot.sh 2>&1 | tee "$log"
+status=$?
+echo "Pilot log: $log"
+echo "Pilot exit status: $status"
+```
+
+Protocol-v3 is separate from the 0.1-rate protocols; its results must not be
+pooled with them. `LEARNING_RATE` accepts `0.1` (default) or `0.01`. Within
+generation-v1, the runner rejects 0.01 under protocol-v1/v2 and reserves
+protocol-v3 for 0.01. Each condition must complete five rounds with all 20
+finite replies, no client failures and finite validation results; the runner
+reports failures and exits nonzero after attempting the remaining conditions.
+Inspect the saved per-seed validation metrics and checkpoints too. A successful
+12-run pilot is only preliminary evidence of stability, not proof.
+
+Only after reviewing the pilot and explicitly choosing and freezing the
+protocol and seeds, the following is a **conditional** final validation
+comparison for the proposed seeds 42–51 if 0.01 is selected unchanged. It
+starts a new execution and runs all 40 conditions from scratch, rather than
+reusing pilot or historical runs. Verify the same committed source and
+environment again, retain its manifest and log, and report any failed
+conditions rather than treating them as pairs. Compare the final manifest's
+revision, source hashes, dependency versions and environment settings with
+the pilot manifest:
+
+```bash
+set -o pipefail
+log=$(mktemp "$HOME/organa-lr001-final.XXXXXX.log")
+GENERATION_ID=generation-v1 PROTOCOL_ID=protocol-v3 EXECUTION_ID="" \
+RESULTS_DIR=results/defense MODELS_DIR=models/defense \
+SEEDS="42 43 44 45 46 47 48 49 50 51" \
+AGGREGATIONS="fedavg median" RUN_CLEAN_CONTROLS=true \
+LEARNING_RATE=0.01 POISON_NUM_CLIENTS=4 POISON_FRACTION=1.0 \
+CONTINUE_ON_FAILURE=true bash run_median_defense_pilot.sh 2>&1 | tee "$log"
+status=$?
+echo "Final log: $log"
+echo "Final exit status: $status"
+```
+
+If the candidate fails or another setting is chosen, do not run this final
+command as written; evaluate the revised candidate under a new protocol
+before freezing it. Keep test evaluation disabled until the protocol is fixed
+and a separate test-evaluation decision is made.
+
 Select `aggregation="median"` in a direct Flower run to use the defense with
 either baseline or label-flipping training; the default is `fedavg`. For each
 floating-point model coordinate, median sorts the client values and returns

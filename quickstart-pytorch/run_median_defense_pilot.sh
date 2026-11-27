@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 if (($# != 0)); then
-  echo "Usage: $0 (optionally set SEEDS, AGGREGATIONS, RUN_CLEAN_CONTROLS, POISON_NUM_CLIENTS, POISON_FRACTION, CONTINUE_ON_FAILURE, GENERATION_ID, PROTOCOL_ID, EXECUTION_ID, RESULTS_DIR, MODELS_DIR)" >&2
+  echo "Usage: $0 (optionally set SEEDS, AGGREGATIONS, RUN_CLEAN_CONTROLS, POISON_NUM_CLIENTS, POISON_FRACTION, LEARNING_RATE, CONTINUE_ON_FAILURE, GENERATION_ID, PROTOCOL_ID, EXECUTION_ID, RESULTS_DIR, MODELS_DIR)" >&2
   exit 2
 fi
 
@@ -62,12 +62,27 @@ case "$poison_fraction" in
     ;;
 esac
 
+learning_rate="${LEARNING_RATE:-0.1}"
+case "$learning_rate" in
+  0.1|0.01) ;;
+  *)
+    echo "LEARNING_RATE must be 0.1 or 0.01." >&2
+    exit 2
+    ;;
+esac
+
 results_root="${RESULTS_DIR:-results/defense}"
 models_root="${MODELS_DIR:-models/defense}"
 generation_id="${GENERATION_ID:-generation-v1}"
 protocol_id="${PROTOCOL_ID:-protocol-v1}"
 if [[ ! "$generation_id" =~ ^generation-v[0-9]+$ || ! "$protocol_id" =~ ^protocol-v[0-9]+$ ]]; then
   echo "GENERATION_ID and PROTOCOL_ID must use generation-vN and protocol-vN." >&2
+  exit 2
+fi
+if [[ "$generation_id" == "generation-v1" ]] \
+  && { [[ "$learning_rate" == "0.01" && ( "$protocol_id" == "protocol-v1" || "$protocol_id" == "protocol-v2" ) ]] \
+       || [[ "$learning_rate" == "0.1" && "$protocol_id" == "protocol-v3" ]]; }; then
+  echo "Use a separate protocol ID for each learning rate; generation-v1/protocol-v3 is reserved for 0.01." >&2
   exit 2
 fi
 execution_id="${EXECUTION_ID:-}"
@@ -109,7 +124,7 @@ if names[4:6] != ["kidney-left", "kidney-right"]:
     raise SystemExit(f"Unexpected OrganAMNIST class mapping: {names[4:6]}")
 '
 mkdir -p "$results_dir" "$models_dir"
-python - "$results_dir/pilot-manifest.json" "${seeds[@]}" <<'PY'
+python - "$results_dir/pilot-manifest.json" "$learning_rate" "${seeds[@]}" <<'PY'
 import hashlib
 import json
 import os
@@ -127,7 +142,8 @@ record = {
     "description": "OrganAMNIST matched FedAvg and median label-flipping comparison",
     "dataset": "organamnist",
     "dataset_archive_md5": INFO["organamnist"]["MD5"],
-    "seeds": [int(seed) for seed in sys.argv[2:]],
+    "seeds": [int(seed) for seed in sys.argv[3:]],
+    "learning_rate": float(sys.argv[2]),
     "aggregations": os.environ.get("AGGREGATIONS", "fedavg median").split(),
     "includes_clean_controls": os.environ.get("RUN_CLEAN_CONTROLS", "true") == "true",
     "poison_num_clients": int(os.environ.get("POISON_NUM_CLIENTS", "1")),
@@ -166,7 +182,7 @@ run_condition() {
   echo "Running seed=$seed aggregation=$aggregation poisoned_clients=$poisoned_clients fraction=$fraction"
   if ! flwr run . \
     --federation-config "num-supernodes=20" \
-    --run-config "experiment-type=\"label-flipping\" aggregation=\"$aggregation\" aggregation-subdirectories=true require-complete-round=true dataset=\"organamnist\" seed=$seed num-clients=20 num-server-rounds=5 local-epochs=1 learning-rate=0.1 batch-size=32 poison-num-clients=$poisoned_clients poison-fraction=$fraction poison-source-class-id=4 poison-target-class-id=5 evaluate-test=false generation-id=\"$generation_id\" protocol-id=\"$protocol_id\" execution-id=\"$execution_id\" results-dir=\"$results_root\" models-dir=\"$models_root\"" \
+    --run-config "experiment-type=\"label-flipping\" aggregation=\"$aggregation\" aggregation-subdirectories=true require-complete-round=true dataset=\"organamnist\" seed=$seed num-clients=20 num-server-rounds=5 local-epochs=1 learning-rate=$learning_rate batch-size=32 poison-num-clients=$poisoned_clients poison-fraction=$fraction poison-source-class-id=4 poison-target-class-id=5 evaluate-test=false generation-id=\"$generation_id\" protocol-id=\"$protocol_id\" execution-id=\"$execution_id\" results-dir=\"$results_root\" models-dir=\"$models_root\"" \
     --stream; then
     echo "Flower run failed for seed=$seed aggregation=$aggregation poisoned_clients=$poisoned_clients." >&2
     return 1
@@ -174,14 +190,15 @@ run_condition() {
 
   local fraction_tag
   fraction_tag="$(LC_NUMERIC=C printf "%.3f" "$fraction" | tr '.' 'p')"
-  if ! python - "$results_dir" "$seed" "$aggregation" "$poisoned_clients" "$fraction_tag" "$fraction" <<'PY'
+  if ! python - "$results_dir" "$seed" "$aggregation" "$poisoned_clients" "$fraction_tag" "$fraction" "$learning_rate" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-root, seed, aggregation, count, fraction_tag, fraction = sys.argv[1:]
+root, seed, aggregation, count, fraction_tag, fraction, learning_rate = sys.argv[1:]
 prefix = "median_" if aggregation == "median" else ""
-experiment = f"{prefix}label_flip_r5_e1_lr0p100_clients{count}_f{fraction_tag}_s4_t5"
+rate_tag = f"{float(learning_rate):.3f}".replace(".", "p")
+experiment = f"{prefix}label_flip_r5_e1_lr{rate_tag}_clients{count}_f{fraction_tag}_s4_t5"
 records = list((Path(root) / aggregation / "organamnist" / experiment).glob(f"seed-{seed}_run-*.json"))
 if len(records) != 1:
     raise SystemExit(f"Expected one result for {aggregation}, seed {seed}, clients {count}; found {len(records)}.")
@@ -194,8 +211,8 @@ if (
     or not training["valid_run"]
     or not training["metrics_finite"]
     or not training["model_parameters_finite"]
-    or any(value != 20 for value in training["received_results_by_round"].values())
-    or any(value != 0 for value in training["client_failures_by_round"].values())
+    or training["received_results_by_round"] != {str(i): 20 for i in range(1, 6)}
+    or training["client_failures_by_round"] != {str(i): 0 for i in range(1, 6)}
     or record["metrics"]["test_final"] is not None
     or record["aggregation"] != ("FedAvg" if aggregation == "fedavg" else "coordinate-wise median")
     or record.get("artifact_layout") != "aggregation_subdirectories"
@@ -204,7 +221,7 @@ if (
     or configuration["clients"] != 20
     or configuration["federated_rounds"] != 5
     or configuration["local_epochs"] != 1
-    or configuration["learning_rate"] != 0.1
+    or configuration["learning_rate"] != float(learning_rate)
     or configuration["batch_size"] != 32
     or not configuration["require_complete_round"]
     or label_flipping["num_poisoned_clients"] != int(count)
