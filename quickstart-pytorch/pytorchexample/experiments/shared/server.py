@@ -1,6 +1,7 @@
 """pytorchexample: A Flower / PyTorch app."""
 
 import json
+import math
 from pathlib import Path
 
 import torch
@@ -36,6 +37,19 @@ from pytorchexample.shared.training import (
     set_seed,
 )
 from pytorchexample.shared.visualization import save_confusion_matrix_plot
+
+
+def _contains_only_finite_values(value: object) -> bool:
+    if isinstance(value, torch.Tensor):
+        return bool(torch.isfinite(value).all().item())
+    if isinstance(value, dict):
+        return all(_contains_only_finite_values(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return all(_contains_only_finite_values(item) for item in value)
+    if isinstance(value, float):
+        return math.isfinite(value)
+    return True
+
 
 class VerifiedFedAvg(FedAvg):
     """FedAvg variant that records per-round client reply counts."""
@@ -391,10 +405,32 @@ def save_run_result(
         for round_num in range(1, num_rounds + 1)
     }
     num_clients = context.run_config["num-clients"]
-    valid_run = all(
+    all_clients_succeeded = all(
         strategy.received_by_round.get(round_num) == num_clients
         and strategy.failed_by_round.get(round_num, 0) == 0
         for round_num in range(1, num_rounds + 1)
+    )
+    metrics_are_finite = _contains_only_finite_values(
+        {
+            "validation_by_round": server_metrics,
+            "test_final": test_final_metrics,
+            "targeted_validation": targeted_validation_metrics,
+            "targeted_test": targeted_test_metrics,
+            "client_train_metrics": client_train_metrics,
+        }
+    )
+    model_parameters_are_finite = _contains_only_finite_values(
+        result.arrays.to_torch_state_dict()
+    ) and all(
+        _contains_only_finite_values(
+            torch.load(path, map_location="cpu", weights_only=True)
+        )
+        for path in round_checkpoint_paths.values()
+    )
+    valid_run = (
+        all_clients_succeeded
+        and metrics_are_finite
+        and model_parameters_are_finite
     )
 
     record = {
@@ -466,6 +502,8 @@ def save_run_result(
         "training_results": {
             "received_results_by_round": received_by_round,
             "client_failures_by_round": failed_by_round,
+            "metrics_finite": metrics_are_finite,
+            "model_parameters_finite": model_parameters_are_finite,
             "valid_run": valid_run,
         },
     }
