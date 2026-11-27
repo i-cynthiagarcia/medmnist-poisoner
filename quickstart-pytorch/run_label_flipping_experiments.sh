@@ -92,8 +92,8 @@ for value in sys.argv[1:]:
         raise SystemExit("POISON_FRACTIONS values must be greater than 0 and at most 1.")
 PY
 
-results_root="${RESULTS_DIR:-results/poisoning}"
-models_root="${MODELS_DIR:-models/poisoning}"
+results_root="${RESULTS_DIR:-results/poisoning/flipping}"
+models_root="${MODELS_DIR:-models/poisoning/flipping}"
 generation_id="${GENERATION_ID:-generation-v3}"
 protocol_id="${PROTOCOL_ID:-protocol-v1}"
 if [[ ! "$generation_id" =~ ^generation-v[0-9]+$ ]]; then

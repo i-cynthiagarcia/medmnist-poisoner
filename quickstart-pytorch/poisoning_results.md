@@ -1,9 +1,79 @@
-# Label-Flipping Results
+# Label-Flipping Poisoning Results
 
-This document tracks label-flipping protocol decisions, verification, and
-high-level findings. The per-run JSON records are the source of truth for full
+This document tracks label-flipping protocol decisions, execution status, verification, and
+high-level findings across all three Organ datasets. The per-run JSON records are the source of truth for full
 metrics, partition manifests, and artifact paths. Clean federated controls are
 documented separately in [baseline_results.md](baseline_results.md).
+
+## Experiment Completion Summary
+
+The planned label-flipping matrices across OrganAMNIST, OrganCMNIST, and
+OrganSMNIST have been executed and retained for defense evaluation.
+OrganAMNIST protocol-v3 has three invalid cells, and its factorial analysis is
+not ready to finalize. Across five protocols, the archive contains **659 run
+JSON files and 660 partition manifests** (1,319 JSON files in total). One
+manifest belongs to an incomplete OrganCMNIST attempt with no run record.
+These counts include controls, reruns, and partial attempts.
+
+Results and models now live under `results/poisoning/flipping/` and
+`models/poisoning/flipping/`. The earlier `poisoning/generation-v3/` trees
+were moved there and embedded artifact paths updated; protocol IDs, experiment
+settings, and measurements are unchanged. Git history retains the original
+records and paths. Overlay has a separate reserved namespace and no recorded
+protocol or results yet.
+
+For future reruns, preserve the code commit, any local changes, and dependency
+versions alongside the execution. The current runner does not automatically
+record the commit or complete environment, so matching the frozen settings
+alone does not guarantee exact reproduction of historical runs.
+
+### Protocol Overview and Status
+
+| Protocol | Primary Objective | OrganAMNIST | OrganCMNIST | OrganSMNIST | Status |
+|----------|-------------------|:-----------:|:-----------:|:-----------:|--------|
+| **v1** | Single-client, 100% flip trials | ✅ 10 runs (s42-46) | ✅ 10 runs (s42-46) | ✅ 10 runs (s42-46) | Complete |
+| **v2** | Dose-response sweep (1 attacker) | ✅ 51 runs (s42-51) | — | — | Complete |
+| **v3** | Factorial: attacker count × dose | ✅ 173 runs† (s42-51) | — | — | Executed (3 invalid cells) |
+| **v4** | Cross-dataset stability pilot | — | ✅ 6 runs (s47-50) | ✅ 6 runs (s47-50) | Complete (pilot only) |
+| **v5** | Full factorial matrices | — | ✅ 223 runs (s42-51) | ✅ 170 runs (s42-51) | Complete |
+
+**†** OrganAMNIST protocol-v3 contains 170 unique condition-seed cells plus rerun attempts; 3 cells exhibit numerical instabilities in both attempts and are excluded from analysis (seeds 47, 48, 50 with 4 poisoned clients at 25–50% flip fraction).
+
+### Frozen Baselines for Defense Work
+
+| Dataset | Protocol | Record Location | Model Location | Records | Valid Cells |
+|---------|----------|-----------------|-----------------|---------|------------|
+| OrganAMNIST | v3 | `protocol-v3/run-{1,2}/organamnist/` | `protocol-v3/run-{1,2}/organamnist/` | 173 | 167 |
+| OrganCMNIST | v5 | `protocol-v5/run-{4,5}/organcmnist/` | `protocol-v5/run-{4,5}/organcmnist/` | 170 | 170 |
+| OrganSMNIST | v5 | `protocol-v5/run-6/organsmnist/` | `protocol-v5/run-6/organsmnist/` | 170 | 170 |
+
+Locations in this table are relative to the corresponding `flipping/generation-v3/`
+results or models directory. The OrganCMNIST count excludes 53 earlier partial
+run records. Across the canonical matrices there are 507 valid unique cells
+(167 + 170 + 170).
+
+---
+
+## Protocol Progression and Design Rationale
+
+The five protocol versions reflect incremental refinement of attack scope and cross-dataset validation:
+
+**Protocol-v1** established a minimal exploratory condition: single poisoned client with 100% label-flip intensity on each of three datasets (seeds 42–46). This one-condition-per-dataset baseline demonstrated feasibility across OrganAMNIST, OrganCMNIST, and OrganSMNIST with matched clean controls.
+
+**Protocol-v2** extended the scope to dose-response variation while keeping attacker count fixed at one. Ten OrganAMNIST seeds (42–51) were exposed to five flip intensities (0%, 25%, 50%, 75%, 100%) to characterize dose-dependent effects. OrganCMNIST and OrganSMNIST were not included in this sweep; v1 results alone sufficed for initial stability assessment.
+
+**Protocol-v3** introduced a 4×4 factorial matrix (attacker count: 1, 2, 4, 8 × flip fraction per attacker: 25%, 50%, 75%, 100%) for OrganAMNIST across ten seeds. This tested both attacker coordination and intensity on a single dataset before scaling to others. Three numerical instabilities were encountered at the 4-attacker level and reproduced on rerun, motivating the v4 stability pilot.
+
+**Protocol-v4** (stability pilot) reused the three failed v3 seed/condition
+pairs (seeds 47, 48, and 50) on OrganCMNIST and OrganSMNIST. The twelve runs
+comprise three attacks and their matched controls on each dataset. All passed
+the recorded validity checks, supporting a full factorial sweep on those
+datasets under the same training settings; they do not establish the cause of
+the OrganAMNIST failures.
+
+**Protocol-v5** executed the complete 4×4 factorial for OrganCMNIST and OrganSMNIST across ten seeds (42–51), completing the cross-dataset matrix. OrganAMNIST retained protocol-v3 as its frozen baseline (not re-executed under v5) since the v4 pilot confirmed setting stability for the other datasets.
+
+---
 
 ## Completed Protocol-v2: OrganAMNIST Dose Response
 
@@ -52,9 +122,9 @@ model tensors loaded and were finite. The new clean control matches both the
 original protocol-v2 seed-51 control and the seed-51 baseline validation
 metrics for rounds 0–5. All test metrics are null, as specified.
 
-- Earlier runs: [protocol-v2/run-1 results](results/poisoning/generation-v3/protocol-v2/run-1/organamnist/)
-- Seed-51 completion and repeated control: [protocol-v2/run-2 results](results/poisoning/generation-v3/protocol-v2/run-2/organamnist/)
-- Seed-51 checkpoints: [protocol-v2/run-2 models](models/poisoning/generation-v3/protocol-v2/run-2/organamnist/)
+- Earlier runs: [protocol-v2/run-1 results](results/poisoning/flipping/generation-v3/protocol-v2/run-1/organamnist/)
+- Seed-51 completion and repeated control: [protocol-v2/run-2 results](results/poisoning/flipping/generation-v3/protocol-v2/run-2/organamnist/)
+- Seed-51 checkpoints: [protocol-v2/run-2 models](models/poisoning/flipping/generation-v3/protocol-v2/run-2/organamnist/)
 
 The original Flower CLI hit a FAB-size limit after result files accumulated in
 the app directory. The default FAB inclusion behavior was bundling generated
@@ -144,7 +214,7 @@ errors.
 | Training | 5 rounds, 1 local epoch per round, learning rate 0.1, batch size 32 |
 | Attack timing | Same seeded label transform in every training round, starting at round 1 |
 | Evaluation | Clean validation split during training; test evaluation disabled |
-| Output location | `results/poisoning/generation-v3/protocol-v3/run-N/organamnist/` |
+| Output location | `results/poisoning/flipping/generation-v3/protocol-v3/run-N/organamnist/` |
 
 From `quickstart-pytorch/`, run the frozen matrix with:
 
@@ -173,8 +243,8 @@ execution contains 170 runs (160 attack conditions plus 10 controls).
 
 ### Execution and validity
 
-The initial execution, [run-1 results](results/poisoning/generation-v3/protocol-v3/run-1/organamnist/)
-and [run-1 models](models/poisoning/generation-v3/protocol-v3/run-1/organamnist/),
+The initial execution, [run-1 results](results/poisoning/flipping/generation-v3/protocol-v3/run-1/organamnist/)
+and [run-1 models](models/poisoning/flipping/generation-v3/protocol-v3/run-1/organamnist/),
 contains all 170 unique seed-by-condition cells. All runs completed five
 rounds with 20 client results and no client failures per round. Partition
 coverage checks passed, recorded flip counts match the requested per-client
@@ -189,8 +259,8 @@ parameters:
 | 50 | 4 | 50% | 4 |
 
 These were rerun with unchanged settings in
-[run-2 results](results/poisoning/generation-v3/protocol-v3/run-2/organamnist/)
-and [run-2 models](models/poisoning/generation-v3/protocol-v3/run-2/organamnist/).
+[run-2 results](results/poisoning/flipping/generation-v3/protocol-v3/run-2/organamnist/)
+and [run-2 models](models/poisoning/flipping/generation-v3/protocol-v3/run-2/organamnist/).
 Each rerun completed all five rounds with no client failures, but reproduced
 the same non-finite losses and parameters at the same rounds. The run-2 records
 mark `metrics_finite`, `model_parameters_finite`, and `valid_run` as false.
@@ -198,9 +268,9 @@ The original run-1 records predate the finite-value validity check and
 incorrectly mark these runs valid. The check is now enforced when new records
 are written; see `pytorchexample/experiments/shared/server.py`.
 
-- Seed 47, 4 clients, 50%: [run-1 record](results/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p500_s4_t5/seed-47_run-747155533925153753.json) · [run-2 rerun](results/poisoning/generation-v3/protocol-v3/run-2/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p500_s4_t5/seed-47_run-10086339224390307204.json)
-- Seed 48, 4 clients, 25%: [run-1 record](results/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p250_s4_t5/seed-48_run-13175489404516207263.json) · [run-2 rerun](results/poisoning/generation-v3/protocol-v3/run-2/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p250_s4_t5/seed-48_run-7225105320867385753.json)
-- Seed 50, 4 clients, 50%: [run-1 record](results/poisoning/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p500_s4_t5/seed-50_run-18189058754778482809.json) · [run-2 rerun](results/poisoning/generation-v3/protocol-v3/run-2/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p500_s4_t5/seed-50_run-4125338092416594049.json)
+- Seed 47, 4 clients, 50%: [run-1 record](results/poisoning/flipping/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p500_s4_t5/seed-47_run-747155533925153753.json) · [run-2 rerun](results/poisoning/flipping/generation-v3/protocol-v3/run-2/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p500_s4_t5/seed-47_run-10086339224390307204.json)
+- Seed 48, 4 clients, 25%: [run-1 record](results/poisoning/flipping/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p250_s4_t5/seed-48_run-13175489404516207263.json) · [run-2 rerun](results/poisoning/flipping/generation-v3/protocol-v3/run-2/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p250_s4_t5/seed-48_run-7225105320867385753.json)
+- Seed 50, 4 clients, 50%: [run-1 record](results/poisoning/flipping/generation-v3/protocol-v3/run-1/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p500_s4_t5/seed-50_run-18189058754778482809.json) · [run-2 rerun](results/poisoning/flipping/generation-v3/protocol-v3/run-2/organamnist/label_flip_r5_e1_lr0p100_clients4_f0p500_s4_t5/seed-50_run-4125338092416594049.json)
 
 The matrix therefore has 170 unique cells but only 167 valid cells; the three
 reruns are repeat attempts, not additional seed observations. Preserve both
@@ -323,13 +393,13 @@ Flower execution.
 ### Run records
 
 - Poisoned run:
-  [seed 42 JSON](results/poisoning/generation-v3/protocol-v1/run-1/organamnist/label_flip_r5_e1_lr0p100_clients1_f1p000_s4_t5/seed-42_run-13042088134346131756.json)
+  [seed 42 JSON](results/poisoning/flipping/generation-v3/protocol-v1/run-1/organamnist/label_flip_r5_e1_lr0p100_clients1_f1p000_s4_t5/seed-42_run-13042088134346131756.json)
 - Matched clean control:
-  [seed 42 JSON](results/poisoning/generation-v3/protocol-v1/run-1/organamnist/label_flip_r5_e1_lr0p100_clients0_f0p000_s4_t5/seed-42_run-12640462282327131058.json)
+  [seed 42 JSON](results/poisoning/flipping/generation-v3/protocol-v1/run-1/organamnist/label_flip_r5_e1_lr0p100_clients0_f0p000_s4_t5/seed-42_run-12640462282327131058.json)
 - Saved clean baseline:
   [seed 42 JSON](results/baseline/generation-v3/protocol-v1/run-4/organamnist/baseline_r5_e1_lr0p100/seed-42_run-13016821332549798429.json)
 - Seeds 43–46:
-  [clean controls](results/poisoning/generation-v3/protocol-v1/run-2/organamnist/label_flip_r5_e1_lr0p100_clients0_f0p000_s4_t5/) · [poisoned runs](results/poisoning/generation-v3/protocol-v1/run-2/organamnist/label_flip_r5_e1_lr0p100_clients1_f1p000_s4_t5/)
+  [clean controls](results/poisoning/flipping/generation-v3/protocol-v1/run-2/organamnist/label_flip_r5_e1_lr0p100_clients0_f0p000_s4_t5/) · [poisoned runs](results/poisoning/flipping/generation-v3/protocol-v1/run-2/organamnist/label_flip_r5_e1_lr0p100_clients1_f1p000_s4_t5/)
 
 All five poisoned runs and their clean controls completed five rounds with 20
 client results per round and zero client failures. The poisoned records include
@@ -390,10 +460,10 @@ training data, not a snapshot of the tensors used during execution.
 
 Run records:
 
-- OrganCMNIST seed 42: [clean control](results/poisoning/generation-v3/protocol-v1/run-3/organcmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/seed-42_run-17716134690215662785.json) · [poisoned run](results/poisoning/generation-v3/protocol-v1/run-3/organcmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/seed-42_run-13627381287354949253.json)
-- OrganCMNIST seeds 43–46: [clean controls](results/poisoning/generation-v3/protocol-v1/run-5/organcmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/) · [poisoned runs](results/poisoning/generation-v3/protocol-v1/run-5/organcmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/)
-- OrganSMNIST seed 42: [clean control](results/poisoning/generation-v3/protocol-v1/run-4/organsmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/seed-42_run-15574750315785558871.json) · [poisoned run](results/poisoning/generation-v3/protocol-v1/run-4/organsmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/seed-42_run-16040722783643213093.json)
-- OrganSMNIST seeds 43–46: [clean controls](results/poisoning/generation-v3/protocol-v1/run-6/organsmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/) · [poisoned runs](results/poisoning/generation-v3/protocol-v1/run-6/organsmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/)
+- OrganCMNIST seed 42: [clean control](results/poisoning/flipping/generation-v3/protocol-v1/run-3/organcmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/seed-42_run-17716134690215662785.json) · [poisoned run](results/poisoning/flipping/generation-v3/protocol-v1/run-3/organcmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/seed-42_run-13627381287354949253.json)
+- OrganCMNIST seeds 43–46: [clean controls](results/poisoning/flipping/generation-v3/protocol-v1/run-5/organcmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/) · [poisoned runs](results/poisoning/flipping/generation-v3/protocol-v1/run-5/organcmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/)
+- OrganSMNIST seed 42: [clean control](results/poisoning/flipping/generation-v3/protocol-v1/run-4/organsmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/seed-42_run-15574750315785558871.json) · [poisoned run](results/poisoning/flipping/generation-v3/protocol-v1/run-4/organsmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/seed-42_run-16040722783643213093.json)
+- OrganSMNIST seeds 43–46: [clean controls](results/poisoning/flipping/generation-v3/protocol-v1/run-6/organsmnist/label_flip_r5_e3_lr0p100_clients0_f0p000_s4_t5/) · [poisoned runs](results/poisoning/flipping/generation-v3/protocol-v1/run-6/organsmnist/label_flip_r5_e3_lr0p100_clients1_f1p000_s4_t5/)
 
 ## OrganCMNIST and OrganSMNIST stability pilot (protocol-v4)
 
@@ -411,12 +481,130 @@ successfully. Partition manifests passed their coverage checks, matched
 between each clean/attack pair, and the recorded flip counts agreed with the
 selected clients' source-class counts. These are stability checks, not
 full-matrix effect estimates. Artifacts are under
-`results/poisoning/generation-v3/protocol-v4/run-*/` and
-`models/poisoning/generation-v3/protocol-v4/run-*/`.
+`results/poisoning/flipping/generation-v3/protocol-v4/run-*/` and
+`models/poisoning/flipping/generation-v3/protocol-v4/run-*/`.
 
 The pilot supports proceeding to full OrganCMNIST and OrganSMNIST sweeps under
 the same training settings. Keep the pilot-only `protocol-v4` artifacts
 separate; record and execute the full matrices under a new protocol ID.
+
+## Completed Protocol-v5: OrganCMNIST Full Factorial Matrix
+
+**Status:** Complete for seeds 42–51. The full 4×4 (attacker count × flip
+fraction) factorial matrix completed all 170 unique condition-seed cells with
+no numerical instabilities. All validation metrics are finite. The source-of-truth
+per-run JSON files and model artifacts are under
+`generation-v3/protocol-v5/run-{4,5}/organcmnist/`.
+
+### Frozen Conditions
+
+| Setting | Frozen value |
+|---------|--------------|
+| Dataset and input | OrganCMNIST, 28×28 grayscale |
+| Source → target | kidney-left (class 4) → kidney-right (class 5) |
+| Clients and aggregation | 20 clients; FedAvg; all clients participate each round |
+| Poisoned clients | 1, 2, 4, or 8 per run (5%, 10%, 20%, or 40% of federation) |
+| Flip fractions | 25%, 50%, 75%, or 100% of eligible class-4 labels per poisoned client |
+| Seeds | 42–51 |
+| Training | 5 rounds, 1 local epoch per round, learning rate 0.1, batch size 32 |
+| Attack timing | Same label transform in every training round, starting at round 1 |
+| Evaluation | Clean validation split during training; test evaluation disabled |
+| Output location | `results/poisoning/flipping/generation-v3/protocol-v5/run-{4,5}/organcmnist/` |
+
+### Execution and Validity
+
+Runs 1–3 contained partial attempts; runs 4–5 contain the complete 170-cell
+matrix. All 170 OrganCMNIST records (run-4 and run-5 combined) completed five
+training rounds with 20 client results and no client failures per round.
+Partition coverage checks passed. Recorded metrics, final model parameters, and
+all round checkpoints were finite; all 170 final models and 850 round
+checkpoints (5 per record) loaded successfully. Test metrics are null.
+
+### Round-5 Validation Outcomes Summary
+
+The table shows mean targeted-error changes across 10 seeds for each
+attacker-count and flip-fraction combination. Deltas compare poisoned
+conditions with their same-seed clean controls and are descriptive.
+
+**Targeted Error Rate by Condition** (clean baseline: 3.56% across all seeds)
+
+| Poisoned clients | 25% flip | 50% flip | 75% flip | 100% flip |
+|----------------:|:--------:|:--------:|:--------:|:---------:|
+| 1 | +0.00 pp | +1.44 pp | +0.68 pp | +1.89 pp |
+| 2 | +1.89 pp | +5.00 pp | +3.94 pp | +6.82 pp |
+| 4 | +2.95 pp | +4.17 pp | +10.61 pp | +15.61 pp |
+| 8 | +5.45 pp | +17.95 pp | +21.29 pp | +32.80 pp |
+
+The condition-averaged targeted-error change increases with attacker count;
+the effect also varies substantially across flip fractions.
+
+**Confusion Matrix Row: True Kidney-Left (Class 4) Predictions**
+
+Clean baseline: 29.32% predicted as kidney-left (class 4) / 3.56% as kidney-right (class 5) / 67.12% as other classes.
+
+Poisoned average: 15.92% predicted as kidney-left / 11.84% as kidney-right / 72.23% as other classes.
+
+The poisoned condition both reduces source-class recall (from 29.32% to 15.92%) and
+increases targeted misclassification (from 3.56% to 11.84%).
+
+## Completed Protocol-v5: OrganSMNIST Full Factorial Matrix
+
+**Status:** Complete for seeds 42–51. The full 4×4 (attacker count × flip
+fraction) factorial matrix completed all 170 unique condition-seed cells with
+no numerical instabilities. All validation metrics are finite. The source-of-truth
+per-run JSON files and model artifacts are under
+`generation-v3/protocol-v5/run-6/organsmnist/`.
+
+### Frozen Conditions
+
+| Setting | Frozen value |
+|---------|--------------|
+| Dataset and input | OrganSMNIST, 28×28 grayscale |
+| Source → target | kidney-left (class 4) → kidney-right (class 5) |
+| Clients and aggregation | 20 clients; FedAvg; all clients participate each round |
+| Poisoned clients | 1, 2, 4, or 8 per run (5%, 10%, 20%, or 40% of federation) |
+| Flip fractions | 25%, 50%, 75%, or 100% of eligible class-4 labels per poisoned client |
+| Seeds | 42–51 |
+| Training | 5 rounds, 1 local epoch per round, learning rate 0.1, batch size 32 |
+| Attack timing | Same label transform in every training round, starting at round 1 |
+| Evaluation | Clean validation split during training; test evaluation disabled |
+| Output location | `results/poisoning/flipping/generation-v3/protocol-v5/run-6/organsmnist/` |
+
+### Execution and Validity
+
+Run 6 contains the complete 170-cell matrix for OrganSMNIST. All 170 records
+completed five training rounds with 20 client results and no client failures
+per round. Partition coverage checks passed. Recorded metrics, final model
+parameters, and all round checkpoints were finite; all 170 final models and
+850 round checkpoints (5 per record) loaded successfully. Test metrics are null.
+
+### Round-5 Validation Outcomes Summary
+
+The table shows mean targeted-error changes across 10 seeds for each
+attacker-count and flip-fraction combination. Deltas compare poisoned
+conditions with their same-seed clean controls and are descriptive.
+
+**Targeted Error Rate by Condition** (clean baseline: 11.07% across all seeds)
+
+| Poisoned clients | 25% flip | 50% flip | 75% flip | 100% flip |
+|----------------:|:--------:|:--------:|:--------:|:---------:|
+| 1 | +0.29 pp | -2.00 pp | +0.79 pp | +2.14 pp |
+| 2 | +0.50 pp | +2.07 pp | +2.79 pp | +5.07 pp |
+| 4 | +2.00 pp | +3.71 pp | +7.86 pp | +11.57 pp |
+| 8 | +4.50 pp | +6.50 pp | +15.79 pp | +20.43 pp |
+
+The condition-averaged targeted-error increase scales with attacker count, but
+individual flip fractions differ and one mean change is negative.
+
+**Confusion Matrix Row: True Kidney-Left (Class 4) Predictions**
+
+Clean baseline: 4.29% predicted as kidney-left (class 4) / 11.07% as kidney-right (class 5) / 84.64% as other classes.
+
+Poisoned average: 1.25% predicted as kidney-left / 16.32% as kidney-right / 82.43% as other classes.
+
+OrganSMNIST's clean baseline already has weak kidney-left recall (4.29%), and the
+poisoned condition further reduces it (to 1.25%) while increasing targeted
+misclassification (from 11.07% to 16.32%).
 
 ## Verification suite
 
@@ -460,9 +648,9 @@ Validation evaluation was enabled; test evaluation was disabled.
 
 | Dataset | Frozen result records | Model artifacts |
 |---------|-----------------------|-----------------|
-| OrganAMNIST, protocol-v3 | [run-1 results](results/poisoning/generation-v3/protocol-v3/run-1/organamnist/); three failure reruns in [run-2](results/poisoning/generation-v3/protocol-v3/run-2/organamnist/) | [run-1 models](models/poisoning/generation-v3/protocol-v3/run-1/organamnist/) |
-| OrganCMNIST, protocol-v5 | [run-4 results](results/poisoning/generation-v3/protocol-v5/run-4/organcmnist/) and [run-5 results](results/poisoning/generation-v3/protocol-v5/run-5/organcmnist/) | [run-4 models](models/poisoning/generation-v3/protocol-v5/run-4/organcmnist/) and [run-5 models](models/poisoning/generation-v3/protocol-v5/run-5/organcmnist/) |
-| OrganSMNIST, protocol-v5 | [run-6 results](results/poisoning/generation-v3/protocol-v5/run-6/organsmnist/) | [run-6 models](models/poisoning/generation-v3/protocol-v5/run-6/organsmnist/) |
+| OrganAMNIST, protocol-v3 | [run-1 results](results/poisoning/flipping/generation-v3/protocol-v3/run-1/organamnist/); three failure reruns in [run-2](results/poisoning/flipping/generation-v3/protocol-v3/run-2/organamnist/) | [run-1 models](models/poisoning/flipping/generation-v3/protocol-v3/run-1/organamnist/) |
+| OrganCMNIST, protocol-v5 | [run-4 results](results/poisoning/flipping/generation-v3/protocol-v5/run-4/organcmnist/) and [run-5 results](results/poisoning/flipping/generation-v3/protocol-v5/run-5/organcmnist/) | [run-4 models](models/poisoning/flipping/generation-v3/protocol-v5/run-4/organcmnist/) and [run-5 models](models/poisoning/flipping/generation-v3/protocol-v5/run-5/organcmnist/) |
+| OrganSMNIST, protocol-v5 | [run-6 results](results/poisoning/flipping/generation-v3/protocol-v5/run-6/organsmnist/) | [run-6 models](models/poisoning/flipping/generation-v3/protocol-v5/run-6/organsmnist/) |
 
 OrganAMNIST run-1 has 170 result records, but three contain non-finite
 metrics/model parameters: seed 47 (4 clients, 50%), seed 48 (4 clients, 25%),
@@ -555,3 +743,22 @@ cross-dataset consistency, not bit-for-bit run repeatability. Keep these
 result and model directories unchanged as the baseline for defense work.
 Continue to use validation for development and reserve test evaluation until
 the defense protocol and analysis are locked.
+
+To reproduce either protocol-v5 matrix in a new execution, run from
+`quickstart-pytorch/`:
+
+```bash
+for dataset in organcmnist organsmnist; do
+  SEEDS="42 43 44 45 46 47 48 49 50 51" \
+  POISONED_CLIENT_COUNTS="1 2 4 8" \
+  POISON_FRACTIONS="0.25 0.5 0.75 1.0" \
+  GENERATION_ID="generation-v3" PROTOCOL_ID="protocol-v5" \
+  NUM_CLIENTS=20 NUM_SERVER_ROUNDS=5 LOCAL_EPOCHS=1 \
+  LEARNING_RATE=0.1 BATCH_SIZE=32 \
+  bash ./run_label_flipping_experiments.sh "$dataset" 4 5
+done
+```
+
+The runner allocates a new execution ID under the flipping roots rather than
+overwriting the archived matrices. This command launches experiments; it is
+not needed to inspect the saved records.
