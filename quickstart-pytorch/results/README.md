@@ -7,7 +7,18 @@ results/<category>/generation-vN/protocol-vN/run-N/<dataset>/<experiment>/
 ```
 
 The supported categories are `baseline`, `poisoning`, and `defense`.
-Generation numbers describe successive eras within a category; they do not
+Poisoning adds an attack-family directory before the generation:
+
+```text
+results/poisoning/<flipping|overlay>/generation-vN/protocol-vN/run-N/<dataset>/<experiment>/
+models/poisoning/<flipping|overlay>/generation-vN/protocol-vN/run-N/<dataset>/<experiment>/
+```
+
+Generation, protocol, and execution IDs are scoped to the attack family for
+poisoning. An overlay protocol with the same number as a flipping protocol is
+not the same protocol.
+Generation numbers describe successive eras within a category or poisoning
+attack family; they do not
 assert that every result in a generation is directly comparable. `protocol-vN`
 identifies a protocol structure, and `run-N` identifies one execution of that
 protocol. Reuse the protocol version for reruns with the same structure and
@@ -45,9 +56,12 @@ label-flipping trial, verification status, paired clean comparison, and
 refinement protocol. Run-specific JSON records remain the source of truth for
 full metrics and artifact paths.
 
-Generation numbers are local to each category. For example, a future
-`poisoning/generation-v0` would be the first poisoning-results era, not the
-same protocol as `baseline/generation-v0`.
+Existing label-flipping results and models, including their clean controls and
+partial or failed attempts, were moved from `poisoning/generation-v3/` to
+`poisoning/flipping/generation-v3/`. Embedded artifact paths were updated;
+experiment parameters, metrics, and protocol IDs did not change. The original
+paths and records remain available in Git history. Overlay is reserved for
+future work; no overlay protocol or results are implied by its directory.
 
 PyTorch checkpoints under `quickstart-pytorch/models/` are tracked with Git
 LFS. Collaborators need Git LFS installed and repository read access to fetch

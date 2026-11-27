@@ -200,7 +200,10 @@ to select another `generation-vN`. Results are organized by category,
 generation, protocol, and execution:
 `results/<category>/generation-vN/protocol-vN/run-N/...`. The supported
 categories are `baseline`, `poisoning`, and `defense`; model outputs mirror
-that layout under `models/`. The default baseline sweep writes beneath
+that layout under `models/`. Poisoning results and models additionally use
+an attack-family directory (`flipping` or `overlay`) before the generation.
+Generation, protocol, and run IDs are scoped to that family. The default
+baseline sweep writes beneath
 `results/baseline/generation-v3/protocol-v1/run-N/` and
 `models/baseline/generation-v3/protocol-v1/run-N/`. The runner automatically
 chooses the next run number for that protocol, or you can set `PROTOCOL_ID` and
@@ -306,9 +309,18 @@ NUM_SERVER_ROUNDS=5 LOCAL_EPOCHS=1 LEARNING_RATE=0.1 \
 bash run_label_flipping_experiments.sh organamnist "$SOURCE_CLASS_ID" "$TARGET_CLASS_ID"
 ```
 
-The runner writes into `results/poisoning/` and `models/poisoning/` by default.
+The runner writes into `results/poisoning/flipping/` and
+`models/poisoning/flipping/` by default.
 Set `RESULTS_DIR`, `MODELS_DIR`, `GENERATION_ID`, and `PROTOCOL_ID` to change
-the output locations/version. Each run records the selected client IDs,
+the output locations/version. These variables are complete family roots; do
+not append the family a second time. When invoking Flower directly with
+`experiment-type="label-flipping"`, explicitly set `results-dir` and
+`models-dir` to the flipping roots: the project-wide Flower defaults remain
+the baseline roots. Existing records were migrated to these directories
+without changing their scientific protocol; see the
+[results index](results/README.md). The overlay directory is reserved for
+future experiments and does not imply an implemented overlay protocol.
+Each run records the selected client IDs,
 source/target class IDs and resolved names, poisoning fraction, and targeted
 source-to-target misclassification rate on validation (and test, if explicitly
 enabled in a final evaluation run). It also records the exact number of
