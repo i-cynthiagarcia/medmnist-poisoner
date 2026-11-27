@@ -68,3 +68,46 @@ recall was 0.81 pp lower. These are exploratory observations from five seeds
 and a previously used validation set, not evidence of general protection.
 Do not use the test split until the broader attack and defense protocols are
 fixed.
+
+## Verification after code reorganization
+
+The full existing test suite passed all 52 tests on the reorganized code,
+including the 20-client even median and rejection of missing, duplicate,
+incompatible, and non-finite replies. The tests also check the odd-client
+median. No test split was evaluated.
+
+The source-hash audit compared the original pilot manifest with the current
+source at commit `722331f535c5ed485ffec662a5d9a55459b6b736`:
+
+- 14 recorded files still at their original paths have matching SHA-256 hashes.
+- The label-flipping module and both active Flower dispatchers moved to new
+  paths; all three match their original recorded hashes byte-for-byte.
+- The shared client and server modules and `pyproject.toml` differ. Their
+  refactoring changed imports, strategy placement, dispatch and output-layout
+  configuration, so the manifest hashes cannot establish that the current
+  implementation is identical.
+- Four former baseline/poisoning app wrappers were removed. Their versions at
+  the pilot's recorded starting Git revision match the manifest hashes. The
+  old pilot script was untracked at the time and has since been replaced by
+  `run_median_defense_pilot.sh`; its historical hash cannot be checked against
+  a Git-tracked copy. The pilot also used uncommitted changes to the server and
+  configuration, so its recorded Git revision alone is not the exact source
+  snapshot.
+
+A separate, validation-only seed-42 rerun used the clean committed working
+tree at `722331f535c5ed485ffec662a5d9a55459b6b736`. Its four matched clean
+and poisoned FedAvg and median runs are in
+[`run-2/`](results/defense/generation-v1/protocol-v1/run-2/), with corresponding
+models under [`run-2/`](models/defense/generation-v1/protocol-v1/run-2/).
+All four completed with 20 successful replies in every round, verified
+partitions, finite metrics and weights, and test evaluation disabled. For each
+condition, its partition, configuration, per-round validation and targeted
+metrics, and all five round-checkpoint tensors matched the original seed-42
+pilot exactly.
+
+The recorded Python, platform, CPU/CUDA status, thread settings, dataset
+checksum, and dependency versions matched; the editable project dependency
+reported the newer Git revision. This one-seed behavioral check supports
+continuity after refactoring but does not prove equivalence across all seeds
+or environments. The rerun is a repeat observation, not an additional seed
+in the pilot summary.
