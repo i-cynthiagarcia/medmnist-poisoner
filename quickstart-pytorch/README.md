@@ -414,6 +414,14 @@ differences are in [defense_results.md](defense_results.md).
 
 #### 0.01 OrganAMNIST comparison
 
+The frozen 40-run validation comparison is complete, with no failed
+conditions. Both methods passed the mean clean-accuracy floor, but the
+[class-level results](defense_results.md#class-level-validation-recall)
+show weak clean recall for some classes and seeds. Expansion to a broader
+attack matrix is paused pending review. See the
+[paired comparison](defense_results.md#matched-001-comparison-40-runs) for
+the full results, execution provenance and Ray telemetry warning.
+
 The 12-run validation-only pilot at learning rate 0.01 completed for seeds 42,
 49, and 50 under all four matched conditions. Seed 49's median-clean run
 completed, but three selected seeds do not prove stability. The results and
@@ -461,14 +469,13 @@ reports failures and exits nonzero after attempting the remaining conditions.
 Inspect the saved per-seed validation metrics and checkpoints too. A successful
 12-run pilot is only preliminary evidence of stability, not proof.
 
-After committing the intended source and documentation, the following
-validation comparison starts a new execution and runs all 40 conditions from
-scratch, rather than reusing pilot or historical runs. Verify the committed source and
-environment again, retain its manifest and log, and report any failed
-conditions rather than treating them as pairs. Compare the final manifest's
-revision, source hashes, dependency versions and environment settings with
-the pilot manifest; a documentation-only commit changes the revision without
-changing the recorded training-source hashes.
+The completed 40-run comparison was run with the following command. It is
+retained for reproducibility, not as a request to repeat the run. New
+executions must retain their manifest and log and report any failed conditions
+rather than treating them as pairs. Compare the manifest's source hashes,
+dependency versions and environment settings with the pilot manifest; a
+documentation-only commit changes the revision without changing the recorded
+training-source hashes.
 
 ```bash
 set -o pipefail
@@ -503,11 +510,8 @@ the equal-client weighting of median model aggregation.
 
 Compare the poison-minus-clean change within each aggregation rule, along
 with the clean performance cost of median. Inspect targeted validation error,
-source-class recall, accuracy, loss, and per-seed values. These few seeds and
-reused validation data support exploratory conclusions only; neither the
-pilot nor its configuration selects or evaluates against the test split.
-The completed five-seed pilot and its validation outcomes are summarized in
-[defense_results.md](defense_results.md).
+source-class recall, accuracy, loss, and per-seed values. Results based on the
+shared validation data do not establish general robustness or test performance.
 
 By default, a direct Flower run uses `generation-v3/protocol-v1` and
 automatically selects the next available `run-N` beneath `results/baseline/`

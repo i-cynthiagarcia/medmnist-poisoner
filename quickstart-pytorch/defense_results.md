@@ -1,5 +1,108 @@
 # OrganAMNIST defense results
 
+## Matched 0.01 comparison: 40 runs
+
+The validation-only comparison completed all 40 conditions for seeds 42–51:
+FedAvg and coordinate-wise median, each clean and with four clients flipping
+100% of their kidney-left labels to kidney-right. Every record reports five
+complete rounds, 20 successful replies per round, no client failures, finite
+metrics and parameters, and a valid run. All partition manifests report
+disjoint, complete assignments. Within each seed, all four conditions used
+the same partition, and the two attacks selected the same clients. All five
+recorded round checkpoints and the final model are present for every run.
+Test evaluation was disabled.
+
+The runner log reports no failed conditions. It contains Ray metrics-exporter
+connection errors, which affect telemetry; the experiment records nevertheless
+show complete, valid runs. The execution manifest records revision
+`489e4ad610b648f494fd9c9d6cfa398eddce221e` and a clean starting working tree.
+Its training-source hashes, dataset checksum, Python, platform, CUDA and
+thread settings match the 0.01 pilot; installed dependencies also match
+except for the editable project's recorded revision.
+
+Results and the manifest are in
+[`protocol-v3/run-2/`](results/defense/generation-v1/protocol-v3/run-2/);
+models and checkpoints are in the matching
+[`models/` execution](models/defense/generation-v1/protocol-v3/run-2/).
+The local console log is `~/organa-lr001-final.LN327F.log`.
+
+### Paired round-5 outcomes
+
+Targeted error is the fraction of true kidney-left validation images predicted
+as kidney-right. The attack-effect difference is
+`(median attacked - median clean) - (FedAvg attacked - FedAvg clean)`; a
+negative value favors median. Rates and changes are in percentage points
+(pp), except for the per-image cross-entropy loss.
+
+| Metric | FedAvg clean | FedAvg attacked | FedAvg change | Median clean | Median attacked | Median change |
+|---|---:|---:|---:|---:|---:|---:|
+| Accuracy (%) | 75.58 | 73.56 | -2.01 pp | 75.35 | 75.40 | +0.05 pp |
+| Targeted error (%) | 6.14 | 31.69 | +25.55 pp | 6.36 | 14.08 | +7.73 pp |
+| Kidney-left recall (%) | 75.86 | 24.96 | -50.90 pp | 75.46 | 61.13 | -14.33 pp |
+| Loss | 0.7484 | 0.7720 | +0.0236 | 0.7474 | 0.7552 | +0.0078 |
+
+Both aggregations passed the frozen 75% mean clean-accuracy floor. The
+median-minus-FedAvg clean accuracy difference was -0.23 pp on average. The
+mean targeted-error attack-effect difference was **-17.82 pp**, and was
+negative for every seed:
+
+| Seed | FedAvg clean accuracy | Median clean accuracy | FedAvg targeted-error change | Median targeted-error change | Attack-effect difference |
+|---:|---:|---:|---:|---:|---:|
+| 42 | 75.26% | 75.43% | +11.80 pp | +4.93 pp | -6.87 pp |
+| 43 | 77.58% | 77.66% | +37.32 pp | +10.92 pp | -26.41 pp |
+| 44 | 76.31% | 76.92% | +14.96 pp | +4.93 pp | -10.04 pp |
+| 45 | 70.28% | 70.37% | +32.39 pp | +5.11 pp | -27.29 pp |
+| 46 | 78.17% | 77.68% | +19.37 pp | +9.33 pp | -10.04 pp |
+| 47 | 75.60% | 74.24% | +26.76 pp | +5.46 pp | -21.30 pp |
+| 48 | 77.34% | 76.52% | +14.26 pp | +4.93 pp | -9.33 pp |
+| 49 | 74.13% | 73.86% | +28.35 pp | +5.63 pp | -22.71 pp |
+| 50 | 80.26% | 80.08% | +21.83 pp | +10.92 pp | -10.92 pp |
+| 51 | 70.82% | 70.71% | +48.42 pp | +15.14 pp | -33.27 pp |
+
+Values are rounded independently; changes and means use unrounded values.
+These results apply to the specified four-client attack and shared validation
+set, not to all attack settings or unseen test data.
+
+### Class-level validation recall
+
+Each entry is the mean recall percentage across ten seeds. Support is the
+number of validation examples for that class.
+
+| Class | Support | FedAvg clean | FedAvg attacked | Median clean | Median attacked |
+|---|---:|---:|---:|---:|---:|
+| Bladder | 321 | 30.31 | 35.17 | 30.53 | 33.24 |
+| Femur-left | 233 | 67.17 | 65.45 | 65.11 | 62.06 |
+| Femur-right | 225 | 46.80 | 45.02 | 40.31 | 45.64 |
+| Heart | 392 | 93.47 | 95.41 | 93.78 | 94.95 |
+| Kidney-left | 568 | 75.86 | 24.96 | 75.46 | 61.13 |
+| Kidney-right | 637 | 50.77 | 58.57 | 50.68 | 53.44 |
+| Liver | 1033 | 97.11 | 97.05 | 97.07 | 97.17 |
+| Lung-left | 1033 | 90.67 | 90.78 | 90.78 | 90.43 |
+| Lung-right | 1009 | 85.56 | 86.02 | 85.56 | 86.04 |
+| Pancreas | 529 | 80.28 | 80.02 | 80.43 | 80.59 |
+| Spleen | 511 | 38.77 | 56.32 | 39.55 | 48.57 |
+
+Mean clean macro recall, giving each class equal weight, was 68.80% for
+FedAvg and 68.11% for median. Both aggregations had zero clean recall for
+both femur classes on seeds 45 and 51; seed 45 also had zero bladder recall.
+This does not invalidate the frozen accuracy criterion, but the criterion
+does not capture these class-level weaknesses. Changes in other classes under
+attack should not alone be interpreted as an overall benefit.
+
+The historical 0.1 FedAvg clean controls on these same seeds averaged 80.30%
+accuracy and 71.66% macro recall, versus 75.58% and 68.80% at 0.01. Class
+tradeoffs differ: for example, historical bladder mean recall was 85.05%
+versus 30.31%, while femur-left was 24.29% versus 67.17%. The historical
+controls are from a different protocol and are context, not a controlled
+estimate of the effect of learning rate; do not pool them.
+
+**Status:** Pause the broader attack matrix to review whether the class-level
+tradeoff is acceptable. A possible next diagnostic is a separate, exploratory
+longer-training protocol on clean runs for the weak seeds and a comparison
+seed under both aggregations. If a changed setting is adopted, rerun the full
+matched comparison under that new protocol rather than altering these results.
+OrganCMNIST and OrganSMNIST still require their own preliminary checks.
+
 ## 0.01 learning-rate pilot
 
 The validation-only stability pilot completed all 12 conditions: seeds 42,
