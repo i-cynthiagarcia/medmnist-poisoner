@@ -8,21 +8,25 @@ clients flipping 100% of kidney-left labels to kidney-right. Both used 20
 clients, five rounds, one local epoch, batch size 32 and learning rate 0.01.
 All 24 conditions are valid; no condition failures were reported.
 
-The subsequent three-epoch clean-only diagnostic completed six conditions
-per dataset: the same seeds and aggregations, with all other listed settings
-unchanged. All 12 conditions are valid. Across the pilots and diagnostic, every record
-reports five complete rounds, 20 client replies per round, zero client
-failures, finite metrics and model parameters, and a final model and five
-round checkpoints. Test evaluation was disabled. The logs contain Ray
-metrics-exporter connection errors and `/tmp` object-store fallback warnings;
-the saved training results nonetheless meet the stated checks.
+The subsequent three-epoch clean diagnostic and matched attack pilot each
+completed six conditions per dataset: the same seeds and aggregations, with
+all other listed settings unchanged. All 24 three-epoch conditions are valid.
+Across the pilots and diagnostic, every record reports five complete rounds,
+20 client replies per round, zero client failures, finite metrics and model
+parameters, and a final model and five round checkpoints. Test evaluation was
+disabled. The logs contain Ray metrics-exporter connection errors and `/tmp`
+object-store fallback warnings; the saved training results nonetheless meet
+the stated checks.
 
 The one-epoch pilots' recorded partition summaries agree across the matched
 conditions, and the attacked runs select the same seeded clients and report
 the same flipped-example counts for each aggregation. The three-epoch
-diagnostic's summaries agree across aggregations and with the corresponding
-one-epoch controls. These summaries record counts, not individual indices;
-matching assignments also relies on the seeded implementation and environment.
+diagnostic's summaries agree across aggregations, with the corresponding
+one-epoch controls, and with the three-epoch attacks. The three-epoch attacks
+also use the expected seeded attackers and flip all recorded kidney-left
+examples on those clients. These summaries record counts, not individual
+indices; matching assignments also relies on the seeded implementation and
+environment.
 
 Both pilots and the diagnostic recorded revision
 `d90aed8de1e55527a3fc6593b7b20bc8d3e151f5`, the same source hashes, Python,
@@ -31,6 +35,11 @@ archive checksums. The diagnostic captured its environment at startup; unlike
 the pilot runner, its command did not recheck for environment drift during
 execution. Current source hashes and archive checksums match the manifests,
 but this does not independently prove nothing changed during the diagnostic.
+The attack pilot recorded revision `e0859e3f4df09b901e13344433f776a59ec7e54b`.
+Its source hashes, archive checksums, and captured environment match the
+diagnostic, apart from the editable project's recorded revision. The attack
+command also captured its environment only at startup; neither command
+monitored for mid-run changes.
 
 The initial results and manifests are in
 [`protocol-v5/run-1/`](results/defense/generation-v1/protocol-v5/run-1/) for
@@ -40,8 +49,12 @@ for OrganSMNIST; models are under the matching
 The diagnostic's records and manifest are in
 [`protocol-v6/run-1/`](results/defense/generation-v1/protocol-v6/run-1/),
 with [models and checkpoints](models/defense/generation-v1/protocol-v6/run-1/).
-The local logs are `~/organc-organs-defense-pilot.Vbt9cR.log` and
-`~/organc-organs-clean-diagnostic.WNYiGD.log`.
+The attack records and manifest are in
+[`protocol-v7/run-1/`](results/defense/generation-v1/protocol-v7/run-1/),
+with [models and checkpoints](models/defense/generation-v1/protocol-v7/run-1/).
+The local logs are `~/organc-organs-defense-pilot.Vbt9cR.log`,
+`~/organc-organs-clean-diagnostic.WNYiGD.log`, and
+`~/organc-organs-attack-pilot.LuXpPN.log`.
 
 ### One-epoch matched pilot
 
@@ -74,9 +87,10 @@ for OrganCMNIST and 11.80% / 11.79% for OrganSMNIST (FedAvg / median).
 
 ### Three-epoch clean diagnostic
 
-These are clean controls only, not a three-epoch attack comparison. The
-three-seed mean final accuracy and macro recall, with classes weighted equally
-for macro recall, were:
+The initial diagnostic contained clean controls only; its subsequently
+completed matched attacks are analyzed below. The three-seed mean final
+accuracy and macro recall, with classes weighted equally for macro recall,
+were:
 
 | Dataset | FedAvg accuracy | Median accuracy | FedAvg macro recall | Median macro recall | FedAvg loss | Median loss |
 |---|---:|---:|---:|---:|---:|---:|
@@ -126,13 +140,113 @@ varied: for example, median achieved 22.92% on seed 42 and 91.67% on seed
 ### Decision and next steps
 
 The three-epoch candidate is more informative than the one-epoch setting,
-but three seeds do not establish stability. A matched three-epoch attack pilot
-is still needed before interpreting defense effects; review the OrganSMNIST
-class-level weakness when choosing whether to refine the candidate further.
-Define dataset-specific clean-performance requirements and decide settings
-before freezing fresh 40-condition comparisons on harmonized seeds 42–51.
-Do not automatically apply OrganAMNIST's 75% floor to these datasets. Broader
-matrices and test evaluation remain separate decisions.
+but three seeds do not establish stability. The dataset-specific criteria
+below are now frozen for fresh 40-condition comparisons on harmonized seeds
+42–51. OrganSMNIST is an exploratory comparison with a known femur-right
+limitation. Broader matrices and test evaluation remain separate decisions.
+
+### Three-epoch matched attack pilot
+
+The four-client, 100%-flip attack maps kidney-left (class 4) to kidney-right
+(class 5); femur-right is **not** an attack source or target. It is included
+in the class-level review to expose weak clean or collateral performance.
+This is the same targeted kidney attack evaluated in the one-epoch pilot.
+
+The table gives three-seed means at round 5. The primary metric is the
+per-seed difference in attack-induced targeted error,
+`(median attacked - median clean) - (FedAvg attacked - FedAvg clean)`;
+negative favors median. Changes and means use unrounded values, and rates
+and differences are percentages or percentage points (pp), except for loss.
+
+| Dataset | Metric | FedAvg clean | FedAvg attacked | FedAvg change | Median clean | Median attacked | Median change |
+|---|---|---:|---:|---:|---:|---:|---:|
+| OrganCMNIST | Accuracy (%) | 83.81 | 81.10 | -2.70 pp | 83.12 | 82.07 | -1.06 pp |
+| OrganCMNIST | Targeted error (%) | 8.08 | 36.11 | +28.03 pp | 9.34 | 24.49 | +15.15 pp |
+| OrganCMNIST | Kidney-left recall (%) | 62.63 | 7.58 | -55.05 pp | 60.35 | 26.01 | -34.34 pp |
+| OrganCMNIST | Loss | 0.5463 | 0.5694 | +0.0231 | 0.5516 | 0.5596 | +0.0080 |
+| OrganSMNIST | Accuracy (%) | 61.27 | 59.65 | -1.62 pp | 60.58 | 59.95 | -0.63 pp |
+| OrganSMNIST | Targeted error (%) | 13.33 | 43.33 | +30.00 pp | 12.14 | 31.19 | +19.05 pp |
+| OrganSMNIST | Kidney-left recall (%) | 39.52 | 0.71 | -38.81 pp | 39.05 | 13.10 | -25.95 pp |
+| OrganSMNIST | Loss | 1.0213 | 1.0359 | +0.0146 | 1.0308 | 1.0363 | +0.0055 |
+
+| Dataset | Seed | FedAvg targeted-error change | Median targeted-error change | Median minus FedAvg change |
+|---|---:|---:|---:|---:|
+| OrganCMNIST | 42 | +25.00 pp | +14.39 pp | -10.61 pp |
+| OrganCMNIST | 49 | +27.27 pp | +13.64 pp | -13.64 pp |
+| OrganCMNIST | 50 | +31.82 pp | +17.42 pp | -14.39 pp |
+| OrganSMNIST | 42 | +32.14 pp | +17.14 pp | -15.00 pp |
+| OrganSMNIST | 49 | +22.14 pp | +17.86 pp | -4.29 pp |
+| OrganSMNIST | 50 | +35.71 pp | +22.14 pp | -13.57 pp |
+
+The mean paired difference was -12.88 pp for OrganCMNIST and -10.95 pp for
+OrganSMNIST, negative on all three seeds. Median reduced the measured
+attack-induced targeted-error increase but did not prevent substantial
+kidney-left recall loss. These are exploratory validation results for one
+attack setting and three selected seeds, not a general robustness claim.
+
+#### Attacked class-level validation recall
+
+The table gives mean recall percentages across three seeds. The corresponding
+clean recalls and class supports are in the clean diagnostic table above.
+
+| Class | OrganC FedAvg attacked | OrganC median attacked | OrganS FedAvg attacked | OrganS median attacked |
+|---|---:|---:|---:|---:|
+| Bladder | 80.98 | 79.23 | 48.94 | 45.04 |
+| Femur-left | 83.33 | 82.68 | 91.99 | 93.27 |
+| Femur-right | 45.14 | 47.57 | 0.70 | 0.70 |
+| Heart | 86.96 | 87.13 | 66.67 | 65.31 |
+| Kidney-left | 7.58 | 26.01 | 0.71 | 13.10 |
+| Kidney-right | 78.77 | 78.13 | 64.78 | 58.70 |
+| Liver | 94.02 | 94.17 | 89.27 | 89.07 |
+| Lung-left | 93.66 | 93.18 | 33.08 | 35.89 |
+| Lung-right | 91.86 | 91.86 | 87.64 | 87.39 |
+| Pancreas | 73.00 | 73.00 | 65.12 | 66.19 |
+| Spleen | 80.65 | 81.63 | 27.39 | 27.54 |
+
+OrganSMNIST femur-right recall was already 0.35% on average under both
+clean aggregations and was 0.70% when attacked; the class has 95 validation
+examples. By seed, clean to attacked recalls were 0% to 0%, 0% to 0%, and
+1.05% to 2.11% for FedAvg, and 0% to 1.05%, 0% to 0%, and 1.05% to 1.05%
+for median (seeds 42, 49, 50). These small differences do not establish
+an improvement. For OrganSMNIST seed 49, attacked kidney-left recall fell to
+zero under both methods.
+
+#### Frozen OrganCMNIST and OrganSMNIST comparisons
+
+For each dataset, run all 40 conditions **fresh**: seeds 42–51, FedAvg and
+median, each clean and with four of 20 clients flipping 100% of kidney-left
+labels to kidney-right. Use five rounds, three local epochs, learning rate
+0.01 and batch size 32. Require all 20 clients and keep test evaluation
+disabled. Do not reuse the preliminary clean or attack records as cells.
+
+The frozen clean-performance floors are **80% accuracy and 50% kidney-left
+recall for OrganCMNIST**, and **55% accuracy and 25% kidney-left recall for
+OrganSMNIST**. Apply each floor to the unrounded mean of the ten clean seed
+results separately for each aggregation, and only assess that aggregation
+when all ten clean cells are valid. Report individual seeds and all class
+recalls. No all-class floor or median-versus-FedAvg clean-deficit threshold is
+frozen. In particular, report the OrganSMNIST femur-right weakness; its floor
+does not establish general model or clinical suitability. These practical
+floors were informed by the three-seed pilot, not independent test data.
+
+The primary attack metric is the per-seed difference in attack-induced targeted
+error, `(median attacked - median clean) - (FedAvg attacked - FedAvg clean)`;
+negative favors median. Report its mean and each paired seed, plus each
+method's attack change, clean accuracy difference, kidney-left recall,
+validation loss, and class-level performance. No attack-effect threshold is
+frozen.
+
+Require all 40 valid conditions for a complete comparison on each dataset.
+Continue after condition failures and report them; do not silently exclude
+numerical failures or treat unpaired cells as pairs. Retry at most once only
+for a documented infrastructure failure, with the same seed, configuration,
+source and environment, in a separate execution preserving both attempts.
+The runner does not retry automatically. If cells remain invalid, report
+the incomplete comparison and any complete pairs as exploratory.
+
+The [comparison runner and instructions](README.md#organcmnist-and-organsmnist-frozen-comparisons)
+create separate new execution directories per dataset. A floor failure is a
+reported scientific outcome, not a condition-execution failure.
 
 ## Matched 0.01 comparison: 40 runs
 

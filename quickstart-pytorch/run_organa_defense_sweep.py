@@ -43,7 +43,7 @@ def load_records(root):
     return records
 
 
-def validate_record(record, seed, aggregation, count, fraction, dataset="organamnist"):
+def validate_record(record, seed, aggregation, count, fraction, dataset="organamnist", local_epochs=1):
     config = record["configuration"]
     attack = config["label_flipping"]
     training = record["training_results"]
@@ -63,7 +63,7 @@ def validate_record(record, seed, aggregation, count, fraction, dataset="organam
         or record["metrics"]["test_final"] is not None
         or config["clients"] != 20
         or config["federated_rounds"] != 5
-        or config["local_epochs"] != 1
+        or config["local_epochs"] != local_epochs
         or config["learning_rate"] != 0.01
         or config["batch_size"] != 32
         or not config["require_complete_round"]

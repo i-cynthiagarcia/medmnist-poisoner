@@ -497,17 +497,18 @@ test evaluation disabled until a separate test-evaluation decision is made.
 
 #### OrganCMNIST and OrganSMNIST defense pilots
 
-Each dataset completed 12 validation-only one-epoch pilot conditions and six
-clean-only three-epoch diagnostic conditions, with no recorded condition
-failures. The three-epoch diagnostic improved clean accuracy, but OrganSMNIST
-femur-right recall remained near zero. See the [pilot and diagnostic analysis](defense_results.md#organcmnist-and-organsmnist-defense-pilots)
+Each dataset completed 12 validation-only one-epoch pilot conditions and 12
+three-epoch conditions (six clean and six attacked), with no recorded
+condition failures. For the kidney-left-to-kidney-right attack, median reduced
+the mean attack-induced targeted-error increase relative to FedAvg in both
+three-seed pilots. OrganSMNIST femur-right recall remained near zero; that
+class is a clean-performance check, not an attack target. See the
+[pilot analysis](defense_results.md#organcmnist-and-organsmnist-defense-pilots)
 for paired and class-level results, provenance and limitations.
 
-The three-epoch attacks have not been run. Review a matched attack pilot and
-dataset-specific clean-performance requirements before freezing fresh
-40-condition comparisons on seeds 42–51. Neither dataset automatically
-inherits OrganAMNIST's 75% accuracy floor; test evaluation remains a separate
-decision.
+The [fresh 40-condition comparisons](#organcmnist-and-organsmnist-frozen-comparisons)
+are now frozen with separate accuracy and kidney-left recall floors. OrganS
+remains exploratory, with its femur-right weakness explicitly reported.
 
 The following command ran the completed **one-epoch** pilots. It is retained
 for reproducibility, not as a request to repeat them; this runner does not
@@ -545,6 +546,47 @@ the remaining work; preserve all outputs and the log. No automatic retries
 are performed. Investigate failures rather than silently excluding them;
 any retry should be limited to a documented infrastructure failure and
 preserve the original attempt. Test evaluation is disabled.
+
+#### OrganCMNIST and OrganSMNIST frozen comparisons
+
+The [frozen protocol](defense_results.md#frozen-organcmnist-and-organsmnist-comparisons)
+runs 40 fresh conditions per dataset: seeds 42–51, FedAvg and median, clean
+and four-client 100% kidney-left-to-kidney-right flips. Each uses 20 clients,
+five rounds, three local epochs, learning rate 0.01 and batch size 32.
+The mean clean accuracy / kidney-left recall floors are 80% / 50% for
+OrganCMNIST and 55% / 25% for OrganSMNIST, separately for each aggregation.
+The OrganSMNIST comparison is exploratory and does not have a femur-recall
+gate. Report its known class-level weakness. Test evaluation is disabled.
+
+Commit the intended source, tests and documentation and activate the project
+environment. From `quickstart-pytorch/`, run both datasets sequentially:
+
+```bash
+set -o pipefail
+log=$(mktemp "$HOME/organc-organs-defense-comparison.XXXXXX.log")
+if python -u run_organ_cs_defense_comparison.py 2>&1 | tee "$log"; then
+  status=0
+else
+  status=$?
+fi
+echo "Comparison log: $log"
+echo "Comparison exit status: $status"
+```
+
+The runner creates a non-overwriting execution directory per dataset under
+`results/defense/generation-v1/protocol-v8/` and matching `models/defense/`
+directories. It verifies source, revision, environment and dataset checksums
+before and after conditions; checks records, checkpoints, partition summaries,
+seeded attackers and full-flip counts; and saves manifests and outcomes.
+Partition summaries contain counts rather than individual indices. Ordinary
+condition failures are logged and the remaining conditions continue; source,
+environment or dataset drift stops the remaining work. There are no automatic
+retries. Preserve the log and attempts and follow the frozen failure rules.
+
+Each outcome reports clean floors only when all ten clean cells for that
+aggregation are valid. A floor failure is reported in the outcome but does not
+make the runner exit nonzero: it is a scientific finding, not an execution
+failure. A nonzero exit indicates failed or incomplete execution.
 
 #### OrganAMNIST defense matrix sweep
 
