@@ -253,43 +253,250 @@ class OrganCSDefenseSweepTests(unittest.TestCase):
 
 
 class OrganSweepLauncherTests(unittest.TestCase):
-    def test_runs_both_sweeps_in_order(self):
-        with (
-            mock.patch.object(launcher.subprocess, "check_output", return_value=launcher.RUNNER.read_bytes()),
-            mock.patch.object(launcher.organ_a, "validate_reference", return_value=({}, {})),
-            mock.patch.object(launcher.organ_a, "validate_environment"),
-            mock.patch.object(launcher.organ_cs, "preflight"),
-            mock.patch.object(launcher.subprocess, "run", return_value=SimpleNamespace(returncode=0)) as run,
-            contextlib.redirect_stdout(io.StringIO()),
-        ):
-            self.assertEqual(launcher.main([]), 0)
-        self.assertEqual(
-            [Path(call.args[0][-1]).name for call in run.call_args_list],
-            ["run_organa_defense_sweep.py", "run_organ_cs_defense_sweep.py"],
-        )
+    def test_launcher_contains_all_900_unique_conditions(self):
+        cells = launcher.conditions()
+        self.assertEqual(len(cells), 900)
+        self.assertEqual(len({
+            (c["dataset"], c["seed"], c["aggregation"], c["count"], c["fraction"])
+            for c in cells
+        }), 900)
 
-    def test_preflights_both_before_running_and_stops_after_failure(self):
+    def test_resume_revalidates_completed_and_retries_once_with_reason(self):
+        cells = [
+            {"dataset": dataset, "seed": 42, "aggregation": "fedavg",
+             "count": 1, "fraction": "0.25", "attempts": []}
+            for dataset in ("organamnist", "organcmnist")
+        ]
+        context = ({"revision": "abc"}, None, None, None, None, None)
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "state.json"
+            state = {"provenance": context[0], "conditions": cells}
+            with (
+                mock.patch.object(launcher, "conditions", return_value=[
+                    {**cell, "attempts": []} for cell in cells
+                ]),
+                mock.patch.object(launcher.organ_cs, "RESULTS", Path(temp) / "results"),
+                mock.patch.object(launcher, "verify_context"),
+                mock.patch.object(launcher, "verify_environment"),
+                mock.patch.object(launcher, "reserve_execution", side_effect=["run-1", "run-2", "run-3"]),
+                mock.patch.object(launcher, "validate_attempt") as validate,
+                mock.patch.object(launcher, "run_attempt", side_effect=[0, 7, 0]) as run,
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                self.assertEqual(launcher.run_sweep(path, state, context, None, 1), 1)
+                state = json.loads(path.read_text())
+                self.assertEqual(state["conditions"][0]["attempts"][0]["status"], "completed")
+                self.assertEqual(state["conditions"][1]["attempts"][0]["status"], "failed")
+                self.assertEqual(launcher.run_sweep(path, state, context, None, 1), 1)
+                self.assertEqual(launcher.run_sweep(path, state, context, "worker disconnected", 1), 0)
+                saved = json.loads(path.read_text())
+                attempts = saved["conditions"][1]["attempts"]
+                self.assertEqual([a["execution"] for a in attempts], ["run-2", "run-3"])
+                self.assertEqual(attempts[1]["retry_reason"], "worker disconnected")
+                self.assertEqual(run.call_count, 3)
+                self.assertGreaterEqual(validate.call_count, 4)
+
+    def test_low_disk_pauses_without_attempting_a_condition(self):
+        cell = {"dataset": "organamnist", "seed": 42, "aggregation": "fedavg",
+                "count": 1, "fraction": "0.25", "attempts": []}
+        context = ({}, None, None, None, None, None)
+        state = {"provenance": {}, "conditions": [cell]}
         with (
-            mock.patch.object(launcher.subprocess, "check_output", return_value=launcher.RUNNER.read_bytes()),
-            mock.patch.object(launcher.organ_a, "validate_reference", return_value=({}, {})),
-            mock.patch.object(launcher.organ_a, "validate_environment"),
-            mock.patch.object(launcher.organ_cs, "preflight") as cs_preflight,
-            mock.patch.object(launcher.subprocess, "run", return_value=SimpleNamespace(returncode=1)) as run,
-            contextlib.redirect_stdout(io.StringIO()),
+            tempfile.TemporaryDirectory() as temp,
+            mock.patch.object(launcher, "conditions", return_value=[cell]),
+            mock.patch.object(launcher, "verify_context"),
+            mock.patch.object(launcher.shutil, "disk_usage", return_value=SimpleNamespace(free=0)),
+            mock.patch.object(launcher, "run_attempt") as run,
             contextlib.redirect_stderr(io.StringIO()) as stderr,
         ):
-            self.assertEqual(launcher.main([]), 1)
-        cs_preflight.assert_called_once()
-        self.assertEqual(run.call_count, 1)
-        self.assertIn("remaining sweeps not attempted", stderr.getvalue())
+            self.assertEqual(launcher.run_sweep(Path(temp) / "state.json", state, context, None, 1), 1)
+            run.assert_not_called()
+            self.assertEqual(cell["attempts"], [])
+            self.assertIn("less than 1 GiB", stderr.getvalue())
+
+    def test_changed_provenance_and_retry_limit_block_execution(self):
+        cell = {"dataset": "organamnist", "seed": 42, "aggregation": "fedavg",
+                "count": 1, "fraction": "0.25",
+                "attempts": [{"status": "failed"}, {"status": "failed"}]}
+        with (
+            tempfile.TemporaryDirectory() as temp,
+            mock.patch.object(launcher, "conditions", return_value=[{**cell, "attempts": []}]),
+            mock.patch.object(launcher, "verify_context"),
+            mock.patch.object(launcher, "run_attempt") as run,
+        ):
+            path = Path(temp) / "state.json"
+            state = {"provenance": {"revision": "old"}, "conditions": [cell]}
+            with self.assertRaisesRegex(ValueError, "provenance differs"):
+                launcher.run_sweep(path, state, ({"revision": "new"},), "reason", 1)
+            with self.assertRaisesRegex(ValueError, "No failed or interrupted condition"):
+                launcher.run_sweep(path, state, (state["provenance"],), "reason", 1)
+            run.assert_not_called()
+
+    def test_reservations_do_not_reuse_interrupted_execution(self):
+        with (
+            tempfile.TemporaryDirectory() as temp,
+            mock.patch.object(launcher.organ_a, "RESULTS", Path(temp)),
+            mock.patch.object(launcher.organ_a, "next_execution_id", return_value="run-1"),
+        ):
+            self.assertEqual(launcher.reserve_execution("organamnist"), "run-1")
+            self.assertEqual(launcher.reserve_execution("organamnist"), "run-2")
+
+    def test_completed_condition_must_still_validate_before_skipping(self):
+        cell = {"dataset": "organamnist", "seed": 42, "aggregation": "fedavg",
+                "count": 1, "fraction": "0.25",
+                "attempts": [{"status": "completed", "execution": "run-1"}]}
+        with (
+            tempfile.TemporaryDirectory() as temp,
+            mock.patch.object(launcher, "conditions", return_value=[{**cell, "attempts": []}]),
+            mock.patch.object(launcher, "verify_context"),
+            mock.patch.object(launcher, "validate_attempt", side_effect=ValueError("missing checkpoint")),
+            mock.patch.object(launcher, "run_attempt") as run,
+        ):
+            with self.assertRaisesRegex(ValueError, "missing checkpoint"):
+                launcher.run_sweep(Path(temp) / "state.json",
+                                   {"provenance": {}, "conditions": [cell]},
+                                   ({},), None, 1)
+            run.assert_not_called()
+
+    def test_interrupted_attempt_requires_reason_and_uses_new_execution(self):
+        cell = {"dataset": "organamnist", "seed": 42, "aggregation": "fedavg",
+                "count": 1, "fraction": "0.25",
+                "attempts": [{"status": "in_progress", "execution": "run-1", "retry_reason": None}]}
+        context = ({}, None, None, None, None, None)
+        with (
+            tempfile.TemporaryDirectory() as temp,
+            mock.patch.object(launcher, "conditions", return_value=[{**cell, "attempts": []}]),
+            mock.patch.object(launcher, "verify_context"),
+            mock.patch.object(launcher, "verify_environment"),
+            mock.patch.object(launcher, "validate_attempt"),
+            mock.patch.object(launcher, "reserve_execution", return_value="run-2"),
+            mock.patch.object(launcher, "run_attempt", return_value=0) as run,
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            path = Path(temp) / "state.json"
+            state = {"provenance": {}, "conditions": [cell]}
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(launcher.run_sweep(path, state, context, None, 1), 1)
+            self.assertEqual(launcher.run_sweep(path, state, context, "host stopped", 1), 0)
+            saved = json.loads(path.read_text())
+            self.assertEqual(saved["conditions"][0]["attempts"][0]["status"], "in_progress")
+            self.assertEqual(saved["conditions"][0]["attempts"][1]["execution"], "run-2")
+            self.assertEqual(run.call_count, 1)
+
+    def test_attempt_command_preserves_frozen_parameters(self):
+        item = {"dataset": "organamnist", "seed": 49, "aggregation": "median",
+                "count": 2, "fraction": "0.5", "attempts": []}
+        with mock.patch.object(launcher.subprocess, "run", return_value=SimpleNamespace(returncode=0)) as run:
+            launcher.run_attempt(item, "run-3", 9)
+        env = run.call_args.kwargs["env"]
+        self.assertEqual((env["SEEDS"], env["AGGREGATIONS"], env["EXECUTION_ID"]),
+                         ("49", "median", "run-3"))
+        self.assertEqual((env["POISON_NUM_CLIENTS"], env["POISON_FRACTION"]), ("2", "0.5"))
+        self.assertEqual(env["RUN_CLEAN_CONTROLS"], "false")
+        self.assertEqual(run.call_args.kwargs["pass_fds"], (9,))
+
+    def test_organa_validation_checks_attempt_manifest_and_attack(self):
+        condition = {"dataset": "organamnist", "seed": 42, "aggregation": "fedavg",
+                     "count": 2, "fraction": "0.5", "attempts": []}
+        keys = (
+            "source_sha256", "dataset_archive_md5", "python", "platform",
+            "torch_cuda_available", "cuda_version", "cuda_devices",
+            "visible_cuda_devices", "omp_num_threads", "mkl_num_threads",
+        )
+        reference = {key: None for key in keys}
+        reference["dependencies"] = ["torch==1"]
+        manifest = {
+            **reference, "git_revision": "revision", "git_status": [], "seeds": [42],
+            "aggregations": ["fedavg"], "includes_clean_controls": False,
+            "learning_rate": 0.01, "poison_num_clients": 2, "poison_fraction": 0.5,
+            "continue_on_failure": True, "evaluate_test": False,
+        }
+        selected = select_poisoned_clients(20, 2, 42)
+        clients = [{"partition_id": i, "class_counts": {"kidney-left": i + 1}} for i in range(20)]
+        flips = {str(i): round((i + 1) * 0.5) for i in selected}
+        record = {
+            "generation_id": "generation-v1", "protocol_id": "protocol-v4",
+            "execution_id": "run-1", "artifact_layout": "aggregation_subdirectories",
+            "configuration": {"label_flipping": {
+                "poisoned_client_ids": selected,
+                "flipped_source_examples_by_client": flips,
+                "total_flipped_source_examples": sum(flips.values()),
+            }},
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "run-1").mkdir()
+            path = root / "run-1/pilot-manifest.json"
+            path.write_text(json.dumps(manifest))
+            with (
+                mock.patch.object(launcher.organ_a, "RESULTS", root),
+                mock.patch.object(launcher.organ_a, "load_records", return_value={(42, "fedavg", 2): record}),
+                mock.patch.object(launcher.organ_a, "validate_record", return_value=clients),
+            ):
+                launcher.validate_a(condition, "run-1", reference, {42: clients}, "revision")
+                record["configuration"]["label_flipping"]["total_flipped_source_examples"] += 1
+                with self.assertRaisesRegex(ValueError, "flip counts"):
+                    launcher.validate_a(condition, "run-1", reference, {42: clients}, "revision")
+                manifest["git_revision"] = "different"
+                path.write_text(json.dumps(manifest))
+                with self.assertRaisesRegex(ValueError, "incompatible pilot manifest"):
+                    launcher.validate_a(condition, "run-1", reference, {42: clients}, "revision")
+
+    def test_failed_condition_does_not_skip_later_conditions(self):
+        cells = [
+            {"dataset": "organamnist", "seed": seed, "aggregation": "fedavg",
+             "count": 1, "fraction": "0.25", "attempts": []}
+            for seed in (42, 43)
+        ]
+        context = ({}, None, None, None, None, None)
+        with (
+            tempfile.TemporaryDirectory() as temp,
+            mock.patch.object(launcher, "conditions", return_value=[{**cell, "attempts": []} for cell in cells]),
+            mock.patch.object(launcher, "verify_context"),
+            mock.patch.object(launcher, "verify_environment"),
+            mock.patch.object(launcher, "reserve_execution", side_effect=["run-1", "run-2"]),
+            mock.patch.object(launcher, "validate_attempt"),
+            mock.patch.object(launcher, "run_attempt", side_effect=[1, 0]) as run,
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            path = Path(temp) / "state.json"
+            state = {"provenance": {}, "conditions": cells}
+            self.assertEqual(launcher.run_sweep(path, state, context, None, 1), 1)
+            self.assertEqual(run.call_count, 2)
+            saved = json.loads(path.read_text())
+            self.assertEqual([cell["attempts"][0]["status"] for cell in saved["conditions"]],
+                             ["failed", "completed"])
+
+    def test_cs_attempt_manifest_must_match_provenance(self):
+        cell = {"dataset": "organcmnist", "seed": 42, "aggregation": "fedavg",
+                "count": 1, "fraction": "0.25", "attempts": []}
+        context = ({"revision": "abc"}, None, None, {"git_revision": "abc"}, None,
+                   {"organcmnist": {"partitions": {}}})
+        with (
+            tempfile.TemporaryDirectory() as temp,
+            mock.patch.object(launcher.organ_cs, "RESULTS", Path(temp)),
+            mock.patch.object(launcher.organ_cs, "validate_condition") as validate,
+        ):
+            directory = Path(temp) / "run-1"
+            directory.mkdir()
+            path = directory / "attempt-manifest.json"
+            manifest = launcher.attempt_manifest(cell, "run-1", context[0])
+            path.write_text(json.dumps(manifest))
+            launcher.validate_attempt(cell, "run-1", context)
+            validate.assert_called_once()
+            manifest["git_revision"] = "changed"
+            path.write_text(json.dumps(manifest))
+            with self.assertRaisesRegex(ValueError, "attempt manifest differs"):
+                launcher.validate_attempt(cell, "run-1", context)
 
     def test_preflight_failure_starts_no_sweep(self):
         with (
-            mock.patch.object(launcher.subprocess, "check_output", return_value=launcher.RUNNER.read_bytes()),
-            mock.patch.object(launcher.organ_a, "validate_reference", return_value=({}, {})),
-            mock.patch.object(launcher.organ_a, "validate_environment"),
-            mock.patch.object(launcher.organ_cs, "preflight", side_effect=ValueError("bad reference")),
-            mock.patch.object(launcher.subprocess, "run") as run,
+            tempfile.TemporaryDirectory() as temp,
+            mock.patch.object(launcher, "STATE_ROOT", Path(temp)),
+            mock.patch.object(launcher, "preflight", side_effect=ValueError("bad reference")),
+            mock.patch.object(launcher, "run_attempt") as run,
             contextlib.redirect_stderr(io.StringIO()) as stderr,
         ):
             self.assertEqual(launcher.main([]), 1)

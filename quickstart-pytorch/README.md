@@ -692,12 +692,27 @@ Test evaluation remains disabled.
 
 #### All three expanded defense sweeps
 
-The optional launcher preflights all three datasets before starting, then runs
-OrganA followed by OrganC and OrganS sequentially. This is **900 new
-conditions**, not a pilot. If a child sweep exits nonzero, the launcher stops
-and reports that the remaining sweeps were not attempted. Individual
-sweep runners remain available as above. The launcher currently supports
-expanded sweeps only; it does not rerun the historical 12- or 40-run stages.
+The optional resumable launcher preflights all three datasets before starting,
+then runs OrganA, OrganC and OrganS sequentially. This is **900 new
+conditions**, not a pilot. It saves an atomic progress file under
+`results/defense/generation-v1/resumable-sweeps/` and prints its path. Every
+condition attempt uses a separate execution directory under protocol-v4
+(OrganA) or protocol-v9 (OrganC/S). Keep the progress file, execution
+directories and logs together; do not run the individual sweep runners
+concurrently with this launcher.
+
+The launcher verifies reference artifacts and provenance, and revalidates
+completed conditions when resuming. It pauses before a new condition if less
+than 1 GiB remains on the workspace filesystem. This reserve is not a
+guarantee against running out of space during a condition. Ordinary failures
+are recorded and the remaining conditions continue; a provenance change stops
+the sweep. An interrupted or failed attempt may be retried **at most once**,
+only after confirming an infrastructure cause; the reason is recorded and the
+original attempt is preserved. A retry restarts the first eligible condition,
+not an individual training round. Do not use the retry option to replace a
+numerical or scientific failure. Any unresolved failures leave the sweep
+incomplete and produce a nonzero exit.
+Individual non-resumable sweep runners remain available as above.
 
 After committing and activating the reference environment, from
 `quickstart-pytorch/`:
@@ -714,10 +729,26 @@ echo "Sweep log: $log"
 echo "Sweep exit status: $status"
 ```
 
-Check available disk space and runtime budget first. Keep the existing
-reference outputs and checkpoints; do not remove or modify them during a
-sweep. OrganSMNIST remains exploratory, and passing its mean floors does not
-resolve its class-level weaknesses.
+To resume after a low-disk pause, free space and run:
+
+```bash
+python -u run_organ_defense_sweeps.py --resume /path/to/sweep-state.json
+```
+
+For a confirmed infrastructure failure or interrupted condition, supply a
+specific reason after investigation:
+
+```bash
+python -u run_organ_defense_sweeps.py --resume /path/to/sweep-state.json \
+  --retry-infrastructure "describe the confirmed infrastructure failure"
+```
+
+Use the printed state path and preserve a separate log for each invocation.
+Resumption requires the same committed revision, environment, datasets and
+reference artifacts. Check available disk space and runtime budget first.
+Keep existing reference outputs and checkpoints; do not remove or modify
+them during a sweep. OrganSMNIST remains exploratory, and passing its mean
+floors does not resolve its class-level weaknesses.
 
 Select `aggregation="median"` in a direct Flower run to use the defense with
 either baseline or label-flipping training; the default is `fedavg`. For each
