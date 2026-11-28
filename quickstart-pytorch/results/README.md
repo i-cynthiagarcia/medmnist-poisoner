@@ -65,6 +65,10 @@ future work; no overlay protocol or results are implied by its directory.
 
 ## Defense results
 
+Reproducible tables and figures for the completed frozen 0.01 comparisons
+are described in [analysis/README.md](../analysis/README.md); generated
+reports are kept outside the training records and model checkpoints.
+
 The first validation-only OrganAMNIST median pilot is described in
 [defense_results.md](../defense_results.md). Its matched FedAvg and median
 runs, manifest, and checkpoints use defense `generation-v1/protocol-v1/run-1`.
