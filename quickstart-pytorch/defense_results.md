@@ -96,12 +96,54 @@ versus 30.31%, while femur-left was 24.29% versus 67.17%. The historical
 controls are from a different protocol and are context, not a controlled
 estimate of the effect of learning rate; do not pool them.
 
-**Status:** Pause the broader attack matrix to review whether the class-level
-tradeoff is acceptable. A possible next diagnostic is a separate, exploratory
-longer-training protocol on clean runs for the weak seeds and a comparison
-seed under both aggregations. If a changed setting is adopted, rerun the full
-matched comparison under that new protocol rather than altering these results.
-OrganCMNIST and OrganSMNIST still require their own preliminary checks.
+The clean class-level weaknesses remain a limitation of this setting; passing
+the accuracy floor does not resolve them. A longer-training diagnostic remains
+an option under a separate protocol. If a changed setting is adopted, rerun
+the full matched comparison rather than altering these results.
+
+### Planned OrganAMNIST attack matrix
+
+The next sweep retains the frozen 0.01 comparison settings and seeds 42–51.
+For each aggregation and seed, vary poisoned clients over 1, 2, 4 and 8 of
+20, and the fraction of each poisoned client's kidney-left labels flipped to
+kidney-right over 25%, 50%, 75% and 100%. The seeded client and example
+selection makes lower counts and doses nested within higher ones for each
+seed; realized flip counts are rounded per client.
+
+The full matrix has 320 attacked conditions plus 20 matched clean controls.
+The existing 20 clean controls and 20 four-client/100% attacks from
+`protocol-v3/run-2` are reused, leaving 300 new attacked conditions. This
+reuse requires the same training source, dataset and environment; results
+from the historical 0.1 protocol are not interchangeable. The
+[sweep runner and instructions](README.md#organamnist-defense-matrix-sweep)
+check the reference and environment before starting, retain a manifest for
+each new attack setting, and report failures without silently dropping cells.
+
+For each matrix cell, report paired attack-induced targeted-error changes
+and their median-minus-FedAvg difference, with class recall, accuracy, loss
+and per-seed outcomes. Treat the matrix as descriptive unless a multiple-
+comparison analysis is specified in advance. These results remain
+validation-only and retain the known clean class-level limitations.
+OrganCMNIST and OrganSMNIST require their own preliminary checks before
+adopting settings.
+
+### Planned OrganCMNIST and OrganSMNIST pilots
+
+Each dataset has a separate 12-condition validation-only pilot: seeds 42, 49
+and 50, each with FedAvg and median, clean and four-client 100% kidney-left
+to kidney-right label flips. Candidate settings are 20 clients, five rounds,
+one local epoch, batch size 32 and learning rate 0.01. These pilots are not
+completed results, and the OrganAMNIST 75% floor is not automatically applied
+to other datasets.
+
+Afterward, review failures, paired attack-induced targeted error, overall
+accuracy, loss and per-class recall, particularly clean class weaknesses.
+Decide dataset-specific clean-performance requirements and settings before
+freezing either dataset's fresh 40-run comparison on harmonized seeds 42–51.
+If the pilots indicate undertraining or instability, refine and pilot the
+settings before freezing; do not pool results across settings. Broader
+matrices and test evaluation remain separate decisions. See the
+[pilot runner instructions](README.md#organcmnist-and-organsmnist-defense-pilots).
 
 ## 0.01 learning-rate pilot
 

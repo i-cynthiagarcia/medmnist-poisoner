@@ -417,8 +417,8 @@ differences are in [defense_results.md](defense_results.md).
 The frozen 40-run validation comparison is complete, with no failed
 conditions. Both methods passed the mean clean-accuracy floor, but the
 [class-level results](defense_results.md#class-level-validation-recall)
-show weak clean recall for some classes and seeds. Expansion to a broader
-attack matrix is paused pending review. See the
+show weak clean recall for some classes and seeds. The planned broader attack
+matrix retains that limitation. See the
 [paired comparison](defense_results.md#matched-001-comparison-40-runs) for
 the full results, execution provenance and Ray telemetry warning.
 
@@ -494,6 +494,95 @@ echo "Final exit status: $status"
 If a different setting is chosen, do not run this command as written;
 evaluate the revised candidate under a new protocol before freezing it. Keep
 test evaluation disabled until a separate test-evaluation decision is made.
+
+#### OrganCMNIST and OrganSMNIST defense pilots
+
+These are planned preliminary checks, not completed results. Each dataset
+gets 12 fresh validation-only conditions: seeds 42, 49 and 50; FedAvg and
+median; clean and four-client 100% kidney-left-to-kidney-right label flips.
+The candidate uses 20 clients, five rounds, one local epoch, batch size 32
+and learning rate 0.01. Neither dataset automatically inherits OrganAMNIST's
+75% accuracy floor. Review stability, paired targeted error, clean accuracy
+and class-level recall before deciding dataset-specific settings and criteria.
+Only if satisfactory should fresh 40-condition comparisons on seeds 42–51
+be frozen and run.
+
+Commit all intended source, tests and documentation first; the runner requires
+a clean tracked working tree and committed runner and training sources.
+Activate the project environment, then from `quickstart-pytorch/` run:
+
+```bash
+set -o pipefail
+log=$(mktemp "$HOME/organc-organs-defense-pilot.XXXXXX.log")
+if python -u run_organ_cs_defense_pilot.py 2>&1 | tee "$log"; then
+  status=0
+else
+  status=$?
+fi
+echo "Pilot log: $log"
+echo "Pilot exit status: $status"
+```
+
+The runner prepares both MedMNIST datasets before training, downloading any
+missing archives through MedMNIST, and verifies their checksums and attack
+class names. It creates a separate non-overwriting execution directory per
+dataset under `results/defense/generation-v1/protocol-v5/` and the matching
+`models/defense/` path. Each manifest captures the source revision, hashes,
+dataset checksum and environment. Each condition requires five complete
+rounds with 20 finite replies, no client failures, validation metrics and
+all model checkpoints. Partition summaries and attack selections are checked
+across matched conditions; summaries contain counts, not individual indices.
+
+Ordinary condition failures are reported and the runner continues through
+both datasets, then exits nonzero. `pilot-outcome.json` records attempted
+conditions and failures. A change to source, environment or dataset stops
+the remaining work; preserve all outputs and the log. No automatic retries
+are performed. Investigate failures rather than silently excluding them;
+any retry should be limited to a documented infrastructure failure and
+preserve the original attempt. Test evaluation is disabled.
+
+#### OrganAMNIST defense matrix sweep
+
+The [planned matrix](defense_results.md#planned-organamnist-attack-matrix)
+uses seeds 42–51, both aggregations, poisoned-client counts 1, 2, 4 and 8,
+and flip fractions 0.25, 0.5, 0.75 and 1.0. It reuses the 20 matched clean
+controls and 20 four-client/100% attacks in
+`results/defense/generation-v1/protocol-v3/run-2/`, then executes the other
+300 attacked conditions under `generation-v1/protocol-v4`. Fifteen new
+execution directories each contain one attack setting across all seeds and
+aggregations.
+
+Commit the source, tests and documentation before running. Activate the same
+Python environment used for the 40-run comparison. The runner validates all
+reference cells, recorded partition summaries and model/checkpoint paths,
+the training-source hashes, dataset archive checksum and captured environment
+before starting. It refuses to run with tracked changes, an uncommitted sweep
+runner or an incompatible reference. Each setting's manifest identifies the
+reused reference and sweep runner; newly completed records are checked against
+the reference partition summaries and deterministic attacker selection.
+The runner rechecks the environment before and after each setting and stops
+if the source, revision or environment changes.
+Partition manifests record client counts and class counts, not individual
+indices; matching assignments also relies on the unchanged seeded partition
+implementation and environment.
+
+```bash
+set -o pipefail
+log=$(mktemp "$HOME/organa-defense-matrix.XXXXXX.log")
+if python -u run_organa_defense_sweep.py 2>&1 | tee "$log"; then
+  status=0
+else
+  status=$?
+fi
+echo "Sweep log: $log"
+echo "Sweep exit status: $status"
+```
+
+The runner continues after failed conditions and reports failed or incomplete
+settings at the end; the child logs identify individual failures. It does not
+retry automatically. Preserve the output and log, and do not restart the whole
+sweep to repair a failed condition; investigate and apply the frozen retry
+rules first. Test evaluation remains disabled.
 
 Select `aggregation="median"` in a direct Flower run to use the defense with
 either baseline or label-flipping training; the default is `fedavg`. For each

@@ -52,7 +52,8 @@ Research Questions:
 - Poisoning results and models are separated into `flipping` and reserved `overlay` directories. Overlay experiments and their protocol are forthcoming.
 - Exploratory validation-only defense comparison completed for the four-client, 100%-flip OrganAMNIST attack. All ten median attack runs are valid, but only nine have completed median-clean controls; the comparison also reuses historical FedAvg records without source/environment manifests.
 - The frozen 40-run OrganAMNIST comparison at learning rate 0.01 completed with no failed conditions. Both aggregations passed the 75% mean clean-accuracy floor; median had a 17.82 pp smaller mean attack-induced targeted-error increase.
-- Expansion is paused for [class-level review](quickstart-pytorch/defense_results.md#class-level-validation-recall): some clean class recalls were weak despite the accuracy floor. Check OrganCMNIST and OrganSMNIST separately before adopting settings for them; reserve test evaluation for a separate decision.
+- The planned [OrganAMNIST defense matrix](quickstart-pytorch/defense_results.md#planned-organamnist-attack-matrix) varies poisoned clients and flip rates using the matched 0.01 controls. It retains the documented weak clean recall for some classes and seeds; passing the accuracy floor does not resolve that limitation.
+- Planned: 12 matched validation-only defense pilot conditions each for OrganCMNIST and OrganSMNIST, before adopting settings or starting their 40-run comparisons. See the [pilot instructions](quickstart-pytorch/README.md#organcmnist-and-organsmnist-defense-pilots); test evaluation remains a separate decision.
 
 **Documentation:**
 - Detailed baseline results in [quickstart-pytorch/baseline_results.md](quickstart-pytorch/baseline_results.md)
