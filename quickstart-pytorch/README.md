@@ -497,19 +497,24 @@ test evaluation disabled until a separate test-evaluation decision is made.
 
 #### OrganCMNIST and OrganSMNIST defense pilots
 
-These are planned preliminary checks, not completed results. Each dataset
-gets 12 fresh validation-only conditions: seeds 42, 49 and 50; FedAvg and
-median; clean and four-client 100% kidney-left-to-kidney-right label flips.
-The candidate uses 20 clients, five rounds, one local epoch, batch size 32
-and learning rate 0.01. Neither dataset automatically inherits OrganAMNIST's
-75% accuracy floor. Review stability, paired targeted error, clean accuracy
-and class-level recall before deciding dataset-specific settings and criteria.
-Only if satisfactory should fresh 40-condition comparisons on seeds 42–51
-be frozen and run.
+Each dataset completed 12 validation-only one-epoch pilot conditions and six
+clean-only three-epoch diagnostic conditions, with no recorded condition
+failures. The three-epoch diagnostic improved clean accuracy, but OrganSMNIST
+femur-right recall remained near zero. See the [pilot and diagnostic analysis](defense_results.md#organcmnist-and-organsmnist-defense-pilots)
+for paired and class-level results, provenance and limitations.
 
-Commit all intended source, tests and documentation first; the runner requires
-a clean tracked working tree and committed runner and training sources.
-Activate the project environment, then from `quickstart-pytorch/` run:
+The three-epoch attacks have not been run. Review a matched attack pilot and
+dataset-specific clean-performance requirements before freezing fresh
+40-condition comparisons on seeds 42–51. Neither dataset automatically
+inherits OrganAMNIST's 75% accuracy floor; test evaluation remains a separate
+decision.
+
+The following command ran the completed **one-epoch** pilots. It is retained
+for reproducibility, not as a request to repeat them; this runner does not
+run the three-epoch diagnostic. Before any new execution, commit intended
+source, tests and documentation; the runner requires a clean tracked working
+tree and committed runner and training sources. Activate the project
+environment, then from `quickstart-pytorch/`:
 
 ```bash
 set -o pipefail
