@@ -68,6 +68,8 @@ future work; no overlay protocol or results are implied by its directory.
 The first validation-only OrganAMNIST median pilot is described in
 [defense_results.md](../defense_results.md). Its matched FedAvg and median
 runs, manifest, and checkpoints use defense `generation-v1/protocol-v1/run-1`.
+The validation-only seed-42 verification rerun is in `run-2` and is a repeat,
+not an additional independent observation.
 Within that execution, results and models are grouped by aggregation:
 
 ```text

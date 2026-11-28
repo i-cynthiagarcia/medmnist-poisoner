@@ -365,6 +365,360 @@ The execution manifest records source hashes, Git state, and the Python and
 dependency environment. The run records retain partitions, checkpoints,
 validation metrics, client counts, and attack details.
 
+For an exploratory four-client, 100%-flip median comparison across seeds
+42–51, reuse the existing valid FedAvg attack/control pairs and median clean
+controls, and run only the new median poisoned conditions:
+
+```bash
+PROTOCOL_ID=protocol-v2 \
+SEEDS="42 43 44 45 46 47 48 49 50 51" \
+AGGREGATIONS=median \
+RUN_CLEAN_CONTROLS=false \
+POISON_NUM_CLIENTS=4 \
+POISON_FRACTION=1.0 \
+CONTINUE_ON_FAILURE=true \
+bash run_median_defense_pilot.sh
+```
+
+This writes a new execution under
+`results/defense/generation-v1/protocol-v2/run-N/` and the matching `models/`
+directory. The reused FedAvg four-client/100%-flip records and their clean
+controls are in
+`results/poisoning/flipping/generation-v3/protocol-v3/run-1/organamnist/`;
+their recorded settings and validity checks match, but their source and
+environment were not captured, so treat cross-protocol findings as
+exploratory. Existing median clean controls are valid for seeds 42–48 and
+50–51; seed 49 has no valid median-clean result and must be excluded from
+matched summaries; see the [seed-49 failure investigation and disposition](defense_results.md#seed-49-median-clean-failure-and-disposition).
+The initial median pilot's seeds 43–46 also predate the current source hashes.
+`CONTINUE_ON_FAILURE=true` attempts later seeds after a failed condition and
+exits nonzero with the failed conditions listed.
+
+The three invalid OrganAMNIST protocol-v3 cells at four poisoned clients and
+25–50% flips remain documented and excluded from completed-pair analyses; see
+[poisoning_results.md](poisoning_results.md).
+
+The protocol-v2 median attack runs completed for all ten seeds. On the nine
+seeds with median-clean controls, the mean poison-minus-clean changes were:
+targeted error +5.05 pp, kidney-left recall -14.55 pp, overall accuracy
+-2.06 pp, and validation loss +0.0738. The corresponding FedAvg changes were
++23.26 pp, -52.17 pp, -2.80 pp, and +0.0220. These are validation-only
+exploratory results: seed 49 lacks a completed median-clean control, seed 42's
+two valid median-clean records have identical round-5 metrics and are counted
+once, and the per-seed outcomes vary. In particular, do not infer general
+robustness from averages alone. Median-clean minus FedAvg-clean mean
+differences were +0.33 pp targeted error, +1.08 pp kidney-left recall,
++1.77 pp accuracy, and -0.0663 loss. The detailed per-seed clean differences,
+within-method attack changes, and median-minus-FedAvg attack-effect
+differences are in [defense_results.md](defense_results.md).
+
+#### 0.01 OrganAMNIST comparison
+
+The frozen 40-run validation comparison is complete, with no failed
+conditions. Both methods passed the mean clean-accuracy floor, but the
+[class-level results](defense_results.md#class-level-validation-recall)
+show weak clean recall for some classes and seeds. The planned broader attack
+matrix retains that limitation. See the
+[paired comparison](defense_results.md#matched-001-comparison-40-runs) for
+the full results, execution provenance and Ray telemetry warning.
+
+The 12-run validation-only pilot at learning rate 0.01 completed for seeds 42,
+49, and 50 under all four matched conditions. Seed 49's median-clean run
+completed, but three selected seeds do not prove stability. The results and
+integrity checks are in [defense_results.md](defense_results.md#001-learning-rate-pilot);
+they do not replace the earlier nine-seed evidence at 0.1.
+
+The [frozen OrganAMNIST comparison protocol](defense_results.md#frozen-organamnist-comparison-protocol)
+uses learning rate 0.01 and seeds 42–51 across all four conditions, with a
+75% mean clean validation-accuracy floor per aggregation and paired targeted
+error as the primary metric. It specifies failure reporting and infrastructure
+retries. The same seed set was subsequently used for the separate
+OrganCMNIST and OrganSMNIST comparisons below.
+
+Before any new execution, commit the intended source and check
+`git status --short` and `git rev-parse HEAD`. Use the same committed source
+and environment for every condition; confirm `command -v python` and
+`command -v flwr` point to the same activated environment, and do not edit the
+source or dependencies during an execution. The manifest records the revision,
+working-tree status, source hashes and
+`pip freeze`; inspect these alongside the results. The script creates its
+output directories before recording status, so new output directories may
+appear as untracked. The completed pilot was run with the following command;
+it is retained for reproducibility, not as a request to repeat the pilot.
+Capture the console log for any new execution, including failures:
+
+```bash
+set -o pipefail
+log=$(mktemp "$HOME/organa-lr001-pilot.XXXXXX.log")
+GENERATION_ID=generation-v1 PROTOCOL_ID=protocol-v3 EXECUTION_ID="" \
+RESULTS_DIR=results/defense MODELS_DIR=models/defense \
+SEEDS="42 49 50" AGGREGATIONS="fedavg median" RUN_CLEAN_CONTROLS=true \
+LEARNING_RATE=0.01 POISON_NUM_CLIENTS=4 POISON_FRACTION=1.0 \
+CONTINUE_ON_FAILURE=true bash run_median_defense_pilot.sh 2>&1 | tee "$log"
+status=$?
+echo "Pilot log: $log"
+echo "Pilot exit status: $status"
+```
+
+Protocol-v3 is separate from the 0.1-rate protocols; its results must not be
+pooled with them. `LEARNING_RATE` accepts `0.1` (default) or `0.01`. Within
+generation-v1, the runner rejects 0.01 under protocol-v1/v2 and reserves
+protocol-v3 for 0.01. Each condition must complete five rounds with all 20
+finite replies, no client failures and finite validation results; the runner
+reports failures and exits nonzero after attempting the remaining conditions.
+Inspect the saved per-seed validation metrics and checkpoints too. A successful
+12-run pilot is only preliminary evidence of stability, not proof.
+
+The completed 40-run comparison was run with the following command. It is
+retained for reproducibility, not as a request to repeat the run. New
+executions must retain their manifest and log and report any failed conditions
+rather than treating them as pairs. Compare the manifest's source hashes,
+dependency versions and environment settings with the pilot manifest; a
+documentation-only commit changes the revision without changing the recorded
+training-source hashes.
+
+```bash
+set -o pipefail
+log=$(mktemp "$HOME/organa-lr001-final.XXXXXX.log")
+GENERATION_ID=generation-v1 PROTOCOL_ID=protocol-v3 EXECUTION_ID="" \
+RESULTS_DIR=results/defense MODELS_DIR=models/defense \
+SEEDS="42 43 44 45 46 47 48 49 50 51" \
+AGGREGATIONS="fedavg median" RUN_CLEAN_CONTROLS=true \
+LEARNING_RATE=0.01 POISON_NUM_CLIENTS=4 POISON_FRACTION=1.0 \
+CONTINUE_ON_FAILURE=true bash run_median_defense_pilot.sh 2>&1 | tee "$log"
+status=$?
+echo "Final log: $log"
+echo "Final exit status: $status"
+```
+
+If a different setting is chosen, do not run this command as written;
+evaluate the revised candidate under a new protocol before freezing it. Keep
+test evaluation disabled until a separate test-evaluation decision is made.
+
+#### OrganCMNIST and OrganSMNIST defense pilots
+
+Each dataset completed 12 validation-only one-epoch pilot conditions and 12
+three-epoch conditions (six clean and six attacked), with no recorded
+condition failures. For the kidney-left-to-kidney-right attack, median reduced
+the mean attack-induced targeted-error increase relative to FedAvg in both
+three-seed pilots. OrganSMNIST femur-right recall remained near zero in that
+three-seed sample; that
+class is a clean-performance check, not an attack target. See the
+[pilot analysis](defense_results.md#organcmnist-and-organsmnist-defense-pilots)
+for paired and class-level results, provenance and limitations.
+
+The [fresh 40-condition comparisons](#organcmnist-and-organsmnist-frozen-comparisons)
+are now complete; their full-seed findings are reported separately from the
+pilots. OrganS remains exploratory.
+
+The following command ran the completed **one-epoch** pilots. It is retained
+for reproducibility, not as a request to repeat them; this runner does not
+run the three-epoch diagnostic. Before any new execution, commit intended
+source, tests and documentation; the runner requires a clean tracked working
+tree and committed runner and training sources. Activate the project
+environment, then from `quickstart-pytorch/`:
+
+```bash
+set -o pipefail
+log=$(mktemp "$HOME/organc-organs-defense-pilot.XXXXXX.log")
+if python -u run_organ_cs_defense_pilot.py 2>&1 | tee "$log"; then
+  status=0
+else
+  status=$?
+fi
+echo "Pilot log: $log"
+echo "Pilot exit status: $status"
+```
+
+The runner prepares both MedMNIST datasets before training, downloading any
+missing archives through MedMNIST, and verifies their checksums and attack
+class names. It creates a separate non-overwriting execution directory per
+dataset under `results/defense/generation-v1/protocol-v5/` and the matching
+`models/defense/` path. Each manifest captures the source revision, hashes,
+dataset checksum and environment. Each condition requires five complete
+rounds with 20 finite replies, no client failures, validation metrics and
+all model checkpoints. Partition summaries and attack selections are checked
+across matched conditions; summaries contain counts, not individual indices.
+
+Ordinary condition failures are reported and the runner continues through
+both datasets, then exits nonzero. `pilot-outcome.json` records attempted
+conditions and failures. A change to source, environment or dataset stops
+the remaining work; preserve all outputs and the log. No automatic retries
+are performed. Investigate failures rather than silently excluding them;
+any retry should be limited to a documented infrastructure failure and
+preserve the original attempt. Test evaluation is disabled.
+
+#### OrganCMNIST and OrganSMNIST frozen comparisons
+
+The [frozen protocol](defense_results.md#frozen-organcmnist-and-organsmnist-comparisons)
+completed 40 fresh conditions per dataset: seeds 42–51, FedAvg and median, clean
+and four-client 100% kidney-left-to-kidney-right flips. Each uses 20 clients,
+five rounds, three local epochs, learning rate 0.01 and batch size 32.
+The mean clean accuracy / kidney-left recall floors are 80% / 50% for
+OrganCMNIST and 55% / 25% for OrganSMNIST, separately for each aggregation.
+The OrganSMNIST comparison is exploratory and does not have a femur-recall
+gate. Test evaluation was disabled.
+
+Both methods passed both mean clean floors for each dataset. Median's mean
+attack-induced targeted-error increase was 9.92 pp smaller on OrganCMNIST and
+7.93 pp smaller on OrganSMNIST; the OrganSMNIST interaction favored FedAvg
+on seed 44. Attacked kidney-left recall remained low, especially for OrganS.
+Its clean femur-right recall averaged 25.05% / 28.00% for FedAvg / median,
+but was zero for both on five seeds. Femur-right is a separate quality check,
+not the attack target. See the [full paired and class-level analysis](defense_results.md#organcmnist-and-organsmnist-matched-40-run-comparisons)
+for verification, seed-level variability and limitations.
+
+The following command ran the completed comparisons and is retained for
+reproducibility, not as a request to repeat them. For a new execution, commit
+the intended source, tests and documentation and activate the project
+environment. From `quickstart-pytorch/`, it runs both datasets sequentially:
+
+```bash
+set -o pipefail
+log=$(mktemp "$HOME/organc-organs-defense-comparison.XXXXXX.log")
+if python -u run_organ_cs_defense_comparison.py 2>&1 | tee "$log"; then
+  status=0
+else
+  status=$?
+fi
+echo "Comparison log: $log"
+echo "Comparison exit status: $status"
+```
+
+The runner creates a non-overwriting execution directory per dataset under
+`results/defense/generation-v1/protocol-v8/` and matching `models/defense/`
+directories. It verifies source, revision, environment and dataset checksums
+before and after conditions; checks records, checkpoints, partition summaries,
+seeded attackers and full-flip counts; and saves manifests and outcomes.
+Partition summaries contain counts rather than individual indices. Ordinary
+condition failures are logged and the remaining conditions continue; source,
+environment or dataset drift stops the remaining work. There are no automatic
+retries. Preserve the log and attempts and follow the frozen failure rules.
+
+Each outcome reports clean floors only when all ten clean cells for that
+aggregation are valid. A floor failure is reported in the outcome but does not
+make the runner exit nonzero: it is a scientific finding, not an execution
+failure. A nonzero exit indicates failed or incomplete execution.
+
+#### OrganAMNIST defense matrix sweep
+
+The [planned matrix](defense_results.md#planned-organamnist-attack-matrix)
+uses seeds 42–51, both aggregations, poisoned-client counts 1, 2, 4 and 8,
+and flip fractions 0.25, 0.5, 0.75 and 1.0. It reuses the 20 matched clean
+controls and 20 four-client/100% attacks in
+`results/defense/generation-v1/protocol-v3/run-2/`, then executes the other
+300 attacked conditions under `generation-v1/protocol-v4`. Fifteen new
+execution directories each contain one attack setting across all seeds and
+aggregations.
+
+Commit the source, tests and documentation before running. Activate the same
+Python environment used for the 40-run comparison. The runner validates all
+reference cells, recorded partition summaries and model/checkpoint paths,
+the training-source hashes, dataset archive checksum and captured environment
+before starting. It refuses to run with tracked changes, an uncommitted sweep
+runner or an incompatible reference. Each setting's manifest identifies the
+reused reference and sweep runner; newly completed records are checked against
+the reference partition summaries and deterministic attacker selection.
+The runner rechecks the environment before and after each setting and stops
+if the source, revision or environment changes.
+Partition manifests record client counts and class counts, not individual
+indices; matching assignments also relies on the unchanged seeded partition
+implementation and environment.
+
+```bash
+set -o pipefail
+log=$(mktemp "$HOME/organa-defense-matrix.XXXXXX.log")
+if python -u run_organa_defense_sweep.py 2>&1 | tee "$log"; then
+  status=0
+else
+  status=$?
+fi
+echo "Sweep log: $log"
+echo "Sweep exit status: $status"
+```
+
+The runner continues after failed conditions and reports failed or incomplete
+settings at the end; the child logs identify individual failures. It does not
+retry automatically. Preserve the output and log, and do not restart the whole
+sweep to repair a failed condition; investigate and apply the frozen retry
+rules first. Test evaluation remains disabled.
+
+#### OrganCMNIST and OrganSMNIST defense matrix sweeps
+
+The [planned matrices](defense_results.md#planned-organcmnist-and-organsmnist-attack-matrices)
+use the OrganAMNIST matrix and seeds, but retain three local epochs and the
+dataset-specific clean criteria. The runner reuses 20 matched clean controls
+and 20 four-client/100% attack records per dataset from the completed
+`protocol-v8/run-1` (OrganC) and `protocol-v8/run-2` (OrganS) comparisons.
+It then runs 300 new attacks per dataset under `protocol-v9`: 1, 2, 4 and 8
+poisoned clients × 0.25, 0.5, 0.75 and 1.0 flip fractions, excluding the
+already completed four-client/1.0 setting. Client and example selections are
+seeded and nested; flip counts are rounded per client.
+
+Before running, preserve the reference results and models, commit the intended
+source, tests and documentation, and activate the same Python environment as
+the comparisons. The runner requires a clean tracked working tree and
+committed runner; it checks both complete reference comparisons, clean floors,
+source and runner hashes, dataset archives, dependencies and environment
+before training. It hashes the reference records, partition manifests and
+model artifacts, verifies those hashes after each 20-condition setting, and
+records them in the new manifest. It also checks each new record, model paths,
+seeded attackers, rounded flip counts and partition summaries. Those
+summaries contain counts, not individual indices; matching assignments also
+relies on the seeded implementation and environment. Source, revision,
+environment or dataset drift stops the remaining work.
+
+From `quickstart-pytorch/`, run OrganC and OrganS sequentially:
+
+```bash
+set -o pipefail
+log=$(mktemp "$HOME/organc-organs-defense-matrix.XXXXXX.log")
+if python -u run_organ_cs_defense_sweep.py 2>&1 | tee "$log"; then
+  status=0
+else
+  status=$?
+fi
+echo "Sweep log: $log"
+echo "Sweep exit status: $status"
+```
+
+Each dataset has a separate non-overwriting execution directory with a
+`sweep-manifest.json` and incrementally updated `sweep-outcome.json`. Ordinary
+condition failures are recorded and the remaining conditions continue; a
+provenance failure stops subsequent work. The runner does not retry or resume
+automatically. Preserve the original outputs and log, investigate failures,
+and follow the frozen retry rules rather than rerunning the whole sweep.
+Test evaluation remains disabled.
+
+#### All three expanded defense sweeps
+
+The optional launcher preflights all three datasets before starting, then runs
+OrganA followed by OrganC and OrganS sequentially. This is **900 new
+conditions**, not a pilot. If a child sweep exits nonzero, the launcher stops
+and reports that the remaining sweeps were not attempted. Individual
+sweep runners remain available as above. The launcher currently supports
+expanded sweeps only; it does not rerun the historical 12- or 40-run stages.
+
+After committing and activating the reference environment, from
+`quickstart-pytorch/`:
+
+```bash
+set -o pipefail
+log=$(mktemp "$HOME/all-organ-defense-matrices.XXXXXX.log")
+if python -u run_organ_defense_sweeps.py 2>&1 | tee "$log"; then
+  status=0
+else
+  status=$?
+fi
+echo "Sweep log: $log"
+echo "Sweep exit status: $status"
+```
+
+Check available disk space and runtime budget first. Keep the existing
+reference outputs and checkpoints; do not remove or modify them during a
+sweep. OrganSMNIST remains exploratory, and passing its mean floors does not
+resolve its class-level weaknesses.
+
 Select `aggregation="median"` in a direct Flower run to use the defense with
 either baseline or label-flipping training; the default is `fedavg`. For each
 floating-point model coordinate, median sorts the client values and returns
@@ -380,11 +734,8 @@ the equal-client weighting of median model aggregation.
 
 Compare the poison-minus-clean change within each aggregation rule, along
 with the clean performance cost of median. Inspect targeted validation error,
-source-class recall, accuracy, loss, and per-seed values. These few seeds and
-reused validation data support exploratory conclusions only; neither the
-pilot nor its configuration selects or evaluates against the test split.
-The completed five-seed pilot and its validation outcomes are summarized in
-[defense_results.md](defense_results.md).
+source-class recall, accuracy, loss, and per-seed values. Results based on the
+shared validation data do not establish general robustness or test performance.
 
 By default, a direct Flower run uses `generation-v3/protocol-v1` and
 automatically selects the next available `run-N` beneath `results/baseline/`

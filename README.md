@@ -50,11 +50,16 @@ Research Questions:
 - Label-flipping runs are preserved for defense evaluation; OrganAMNIST protocol-v3 analysis remains subject to three invalid cells
 - 507 valid unique condition-seed cells across three datasets (OrganAMNIST: 167 from protocol-v3, OrganCMNIST: 170 from protocol-v5, OrganSMNIST: 170 from protocol-v5)
 - Poisoning results and models are separated into `flipping` and reserved `overlay` directories. Overlay experiments and their protocol are forthcoming.
-- Next: Robust aggregation defense evaluation on the documented poisoning baselines
+- Exploratory validation-only defense comparison completed for the four-client, 100%-flip OrganAMNIST attack. All ten median attack runs are valid, but only nine have completed median-clean controls; the comparison also reuses historical FedAvg records without source/environment manifests.
+- The frozen 40-run OrganAMNIST comparison at learning rate 0.01 completed with no failed conditions. Both aggregations passed the 75% mean clean-accuracy floor; median had a 17.82 pp smaller mean attack-induced targeted-error increase.
+- The planned [OrganAMNIST defense matrix](quickstart-pytorch/defense_results.md#planned-organamnist-attack-matrix) varies poisoned clients and flip rates using the matched 0.01 controls. It retains the documented weak clean recall for some classes and seeds; passing the accuracy floor does not resolve that limitation.
+- OrganCMNIST and OrganSMNIST each completed the [frozen 40-condition comparisons](quickstart-pytorch/defense_results.md#organcmnist-and-organsmnist-matched-40-run-comparisons) with both aggregations passing both mean clean floors. Median reduced the mean attack-induced targeted-error increase by 9.92 pp and 7.93 pp, respectively, versus FedAvg; OrganSMNIST seed 44 favored FedAvg. Attacked kidney-left recall remained low. OrganSMNIST is exploratory: clean femur-right recall averaged 25.05% / 28.00% (FedAvg / median) but was zero for both on five seeds. Femur-right is a quality check, not the kidney-label-flipping target.
+- The [OrganC/S defense matrices](quickstart-pytorch/defense_results.md#planned-organcmnist-and-organsmnist-attack-matrices) and an [all-dataset sweep launcher](quickstart-pytorch/README.md#all-three-expanded-defense-sweeps) are prepared, not yet run; each dataset requires 300 new attack conditions.
 
 **Documentation:**
 - Detailed baseline results in [quickstart-pytorch/baseline_results.md](quickstart-pytorch/baseline_results.md)
 - Comprehensive poisoning results and protocol progression in [quickstart-pytorch/poisoning_results.md](quickstart-pytorch/poisoning_results.md)
+- Defense pilots and per-seed validation comparisons in [quickstart-pytorch/defense_results.md](quickstart-pytorch/defense_results.md)
 - Quickstart instructions and running experiments in [quickstart-pytorch/README.md](quickstart-pytorch/README.md)
 
 ## References
