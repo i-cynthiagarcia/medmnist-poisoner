@@ -432,8 +432,8 @@ The [frozen OrganAMNIST comparison protocol](defense_results.md#frozen-organamni
 uses learning rate 0.01 and seeds 42–51 across all four conditions, with a
 75% mean clean validation-accuracy floor per aggregation and paired targeted
 error as the primary metric. It specifies failure reporting and infrastructure
-retries. The same seed set is proposed for OrganCMNIST and OrganSMNIST, which
-need separate stability and clean-performance checks before adopting settings.
+retries. The same seed set was subsequently used for the separate
+OrganCMNIST and OrganSMNIST comparisons below.
 
 Before any new execution, commit the intended source and check
 `git status --short` and `git rev-parse HEAD`. Use the same committed source
@@ -501,14 +501,15 @@ Each dataset completed 12 validation-only one-epoch pilot conditions and 12
 three-epoch conditions (six clean and six attacked), with no recorded
 condition failures. For the kidney-left-to-kidney-right attack, median reduced
 the mean attack-induced targeted-error increase relative to FedAvg in both
-three-seed pilots. OrganSMNIST femur-right recall remained near zero; that
+three-seed pilots. OrganSMNIST femur-right recall remained near zero in that
+three-seed sample; that
 class is a clean-performance check, not an attack target. See the
 [pilot analysis](defense_results.md#organcmnist-and-organsmnist-defense-pilots)
 for paired and class-level results, provenance and limitations.
 
 The [fresh 40-condition comparisons](#organcmnist-and-organsmnist-frozen-comparisons)
-are now frozen with separate accuracy and kidney-left recall floors. OrganS
-remains exploratory, with its femur-right weakness explicitly reported.
+are now complete; their full-seed findings are reported separately from the
+pilots. OrganS remains exploratory.
 
 The following command ran the completed **one-epoch** pilots. It is retained
 for reproducibility, not as a request to repeat them; this runner does not
@@ -550,16 +551,27 @@ preserve the original attempt. Test evaluation is disabled.
 #### OrganCMNIST and OrganSMNIST frozen comparisons
 
 The [frozen protocol](defense_results.md#frozen-organcmnist-and-organsmnist-comparisons)
-runs 40 fresh conditions per dataset: seeds 42–51, FedAvg and median, clean
+completed 40 fresh conditions per dataset: seeds 42–51, FedAvg and median, clean
 and four-client 100% kidney-left-to-kidney-right flips. Each uses 20 clients,
 five rounds, three local epochs, learning rate 0.01 and batch size 32.
 The mean clean accuracy / kidney-left recall floors are 80% / 50% for
 OrganCMNIST and 55% / 25% for OrganSMNIST, separately for each aggregation.
 The OrganSMNIST comparison is exploratory and does not have a femur-recall
-gate. Report its known class-level weakness. Test evaluation is disabled.
+gate. Test evaluation was disabled.
 
-Commit the intended source, tests and documentation and activate the project
-environment. From `quickstart-pytorch/`, run both datasets sequentially:
+Both methods passed both mean clean floors for each dataset. Median's mean
+attack-induced targeted-error increase was 9.92 pp smaller on OrganCMNIST and
+7.93 pp smaller on OrganSMNIST; the OrganSMNIST interaction favored FedAvg
+on seed 44. Attacked kidney-left recall remained low, especially for OrganS.
+Its clean femur-right recall averaged 25.05% / 28.00% for FedAvg / median,
+but was zero for both on five seeds. Femur-right is a separate quality check,
+not the attack target. See the [full paired and class-level analysis](defense_results.md#organcmnist-and-organsmnist-matched-40-run-comparisons)
+for verification, seed-level variability and limitations.
+
+The following command ran the completed comparisons and is retained for
+reproducibility, not as a request to repeat them. For a new execution, commit
+the intended source, tests and documentation and activate the project
+environment. From `quickstart-pytorch/`, it runs both datasets sequentially:
 
 ```bash
 set -o pipefail

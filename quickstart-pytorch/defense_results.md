@@ -1,5 +1,152 @@
 # Defense results
 
+## OrganCMNIST and OrganSMNIST: matched 40-run comparisons
+
+Each validation-only comparison completed all 40 fresh conditions: seeds
+42–51, FedAvg and coordinate-wise median, each clean and with four clients
+flipping 100% of kidney-left labels to kidney-right. No condition failures
+were reported. Every record reports five complete rounds, 20 client replies
+per round, no client failures, finite reported validation metrics and a valid
+run. All five round checkpoints and the final model are present for
+every condition. Test evaluation was disabled.
+
+All partition manifests verify disjoint, complete assignments. Within each
+dataset and seed, the four conditions have matching client summaries; the
+attacks use the seeded client selections and recorded full-flip counts.
+Summaries contain image and class counts, not individual indices, so matching
+assignments also relies on the seeded implementation and environment.
+
+Both manifests record revision `41f1b20e31edc8f83a20a9b3c170c33cb653b7dd`
+and matching source hashes, dependencies and environment settings. The
+recorded source hashes and dataset archive checksums match the current files.
+The local log reports no failed conditions, but contains Ray metrics-exporter
+connection errors and `/tmp` object-store fallback warnings. These concern
+telemetry and potential performance; the saved records meet the stated run
+checks.
+
+Results and manifests are in
+[`protocol-v8/run-1/`](results/defense/generation-v1/protocol-v8/run-1/) for
+OrganCMNIST and [`protocol-v8/run-2/`](results/defense/generation-v1/protocol-v8/run-2/)
+for OrganSMNIST; their checkpoints and final models are under the matching
+[`protocol-v8/` model directory](models/defense/generation-v1/protocol-v8/).
+The local console log is `~/organc-organs-defense-comparison.8pe00C.log`.
+The earlier pilot and diagnostic records are not pooled with these runs.
+
+### Paired round-5 outcomes
+
+Targeted error is the fraction of true kidney-left validation images predicted
+as kidney-right. The primary metric is the per-seed difference in
+attack-induced targeted error,
+`(median attacked - median clean) - (FedAvg attacked - FedAvg clean)`;
+negative favors median. Values are ten-seed means; rates and changes are
+percentages or percentage points (pp), except for per-image loss.
+
+| Dataset | Metric | FedAvg clean | FedAvg attacked | FedAvg change | Median clean | Median attacked | Median change |
+|---|---|---:|---:|---:|---:|---:|---:|
+| OrganCMNIST | Accuracy (%) | 82.55 | 80.05 | -2.51 pp | 82.18 | 80.97 | -1.22 pp |
+| OrganCMNIST | Targeted error (%) | 7.12 | 29.47 | +22.35 pp | 7.35 | 19.77 | +12.42 pp |
+| OrganCMNIST | Kidney-left recall (%) | 58.41 | 7.95 | -50.45 pp | 58.26 | 26.82 | -31.44 pp |
+| OrganCMNIST | Macro recall (%) | 76.37 | 72.14 | -4.23 pp | 75.84 | 73.80 | -2.04 pp |
+| OrganCMNIST | Loss | 0.5761 | 0.6001 | +0.0240 | 0.5794 | 0.5906 | +0.0111 |
+| OrganSMNIST | Accuracy (%) | 58.53 | 57.54 | -0.98 pp | 58.03 | 57.38 | -0.64 pp |
+| OrganSMNIST | Targeted error (%) | 15.93 | 43.50 | +27.57 pp | 13.86 | 33.50 | +19.64 pp |
+| OrganSMNIST | Kidney-left recall (%) | 30.64 | 0.21 | -30.43 pp | 30.93 | 6.50 | -24.43 pp |
+| OrganSMNIST | Macro recall (%) | 50.86 | 49.23 | -1.63 pp | 50.37 | 49.23 | -1.15 pp |
+| OrganSMNIST | Loss | 1.0803 | 1.0900 | +0.0098 | 1.0890 | 1.0902 | +0.0012 |
+
+Both methods passed both frozen ten-seed clean floors on both datasets.
+Median's mean clean accuracy was 0.37 pp lower than FedAvg on OrganCMNIST
+and 0.50 pp lower on OrganSMNIST. The floors apply to means, not individual
+seeds: for example, both methods fell below both OrganCMNIST floors on seed
+45 and both OrganSMNIST floors on seed 47. Passing the means does not remove
+those individual-seed limitations.
+
+The mean targeted-error interaction was **-9.92 pp** for OrganCMNIST and
+**-7.93 pp** for OrganSMNIST. It favored median on all ten OrganCMNIST seeds
+and nine of ten OrganSMNIST seeds; OrganSMNIST seed 44 favored FedAvg by
+1.43 pp. Median reduced the mean attack-induced targeted-error increase, but
+attacked kidney-left recall remained low, especially on OrganSMNIST.
+
+| Dataset | Seed | FedAvg clean accuracy | Median clean accuracy | FedAvg targeted-error change | Median targeted-error change | Interaction |
+|---|---:|---:|---:|---:|---:|---:|
+| OrganCMNIST | 42 | 82.23% | 81.61% | +25.00 pp | +14.39 pp | -10.61 pp |
+| OrganCMNIST | 43 | 85.08% | 84.82% | +27.27 pp | +16.67 pp | -10.61 pp |
+| OrganCMNIST | 44 | 83.44% | 83.53% | +25.76 pp | +14.39 pp | -11.36 pp |
+| OrganCMNIST | 45 | 79.35% | 79.43% | +18.18 pp | +12.12 pp | -6.06 pp |
+| OrganCMNIST | 46 | 80.39% | 79.60% | +10.61 pp | +6.06 pp | -4.55 pp |
+| OrganCMNIST | 47 | 81.98% | 81.90% | +21.21 pp | +12.12 pp | -9.09 pp |
+| OrganCMNIST | 48 | 83.53% | 82.98% | +12.88 pp | +9.09 pp | -3.79 pp |
+| OrganCMNIST | 49 | 85.08% | 84.66% | +27.27 pp | +13.64 pp | -13.64 pp |
+| OrganCMNIST | 50 | 84.11% | 83.11% | +31.82 pp | +17.42 pp | -14.39 pp |
+| OrganCMNIST | 51 | 80.35% | 80.18% | +23.48 pp | +8.33 pp | -15.15 pp |
+| OrganSMNIST | 42 | 62.28% | 61.70% | +32.14 pp | +17.14 pp | -15.00 pp |
+| OrganSMNIST | 43 | 62.77% | 62.40% | +37.14 pp | +25.71 pp | -11.43 pp |
+| OrganSMNIST | 44 | 62.77% | 63.05% | +37.86 pp | +39.29 pp | +1.43 pp |
+| OrganSMNIST | 45 | 55.26% | 54.28% | +20.71 pp | +17.14 pp | -3.57 pp |
+| OrganSMNIST | 46 | 52.08% | 52.12% | +25.71 pp | +12.86 pp | -12.86 pp |
+| OrganSMNIST | 47 | 50.65% | 49.35% | +12.14 pp | +7.86 pp | -4.29 pp |
+| OrganSMNIST | 48 | 57.06% | 56.44% | +27.86 pp | +16.43 pp | -11.43 pp |
+| OrganSMNIST | 49 | 56.89% | 56.48% | +22.14 pp | +17.86 pp | -4.29 pp |
+| OrganSMNIST | 50 | 64.64% | 63.54% | +35.71 pp | +22.14 pp | -13.57 pp |
+| OrganSMNIST | 51 | 60.89% | 60.89% | +24.29 pp | +20.00 pp | -4.29 pp |
+
+Values are rounded independently; means and changes use unrounded values.
+These results describe the specified attack on the shared validation set,
+not all attack settings or unseen test data.
+
+### OrganC and OrganS class-level validation recall
+
+Each entry is the mean recall percentage across ten seeds. Support is the
+number of validation examples for that class.
+
+| OrganCMNIST class | Support | FedAvg clean | FedAvg attacked | Median clean | Median attacked |
+|---|---:|---:|---:|---:|---:|
+| Bladder | 191 | 83.04 | 83.35 | 82.57 | 82.93 |
+| Femur-left | 102 | 69.31 | 69.80 | 67.06 | 67.35 |
+| Femur-right | 96 | 40.94 | 39.38 | 40.00 | 42.71 |
+| Heart | 202 | 86.19 | 86.68 | 85.79 | 86.53 |
+| Kidney-left | 132 | 58.41 | 7.95 | 58.26 | 26.82 |
+| Kidney-right | 157 | 71.59 | 75.54 | 71.91 | 74.90 |
+| Liver | 429 | 94.43 | 94.31 | 94.36 | 94.22 |
+| Lung-left | 347 | 93.03 | 92.65 | 92.85 | 92.39 |
+| Lung-right | 352 | 92.02 | 92.07 | 92.07 | 91.99 |
+| Pancreas | 179 | 73.58 | 73.80 | 73.46 | 73.97 |
+| Spleen | 205 | 77.56 | 78.05 | 75.90 | 77.95 |
+
+| OrganSMNIST class | Support | FedAvg clean | FedAvg attacked | Median clean | Median attacked |
+|---|---:|---:|---:|---:|---:|
+| Bladder | 188 | 52.66 | 54.20 | 50.00 | 51.70 |
+| Femur-left | 104 | 41.92 | 44.33 | 40.67 | 40.77 |
+| Femur-right | 95 | 25.05 | 21.16 | 28.00 | 27.58 |
+| Heart | 246 | 58.29 | 58.21 | 56.71 | 57.20 |
+| Kidney-left | 140 | 30.64 | 0.21 | 30.93 | 6.50 |
+| Kidney-right | 159 | 46.10 | 61.38 | 44.72 | 55.47 |
+| Liver | 491 | 88.45 | 88.35 | 88.86 | 88.57 |
+| Lung-left | 261 | 35.29 | 33.68 | 35.10 | 34.98 |
+| Lung-right | 275 | 84.95 | 85.56 | 84.55 | 84.84 |
+| Pancreas | 280 | 66.14 | 64.96 | 65.86 | 65.29 |
+| Spleen | 213 | 30.00 | 29.53 | 28.73 | 28.59 |
+
+OrganSMNIST clean femur-right recall was zero on seeds 42, 45, 47, 49 and 51
+under both aggregations, and varied up to 95.79% for FedAvg and 94.74% for
+median. Both femur classes had zero clean recall on seeds 45 and 47 for both
+methods. The ten-seed femur-right means are higher than in the three-seed
+pilot, but conceal severe seed dependence. OrganCMNIST also had weak
+femur-right recall on some seeds: FedAvg was zero on seed 51, and median was
+2.08% on seed 47.
+
+| OrganSMNIST clean femur-right recall (%) | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50 | 51 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| FedAvg | 0.00 | 95.79 | 2.11 | 0.00 | 56.84 | 0.00 | 94.74 | 0.00 | 1.05 | 0.00 |
+| Median | 0.00 | 94.74 | 2.11 | 0.00 | 87.37 | 0.00 | 94.74 | 0.00 | 1.05 | 0.00 |
+
+For OrganSMNIST, attacked kidney-left recall was zero on eight seeds with
+FedAvg and four with median. Femur-right is not the attack target; its poor
+clean recall is a separate model-quality limitation. Changes in other classes
+under attack should not alone be interpreted as an overall benefit. The
+OrganSMNIST comparison remains exploratory; the frozen floors and validation
+results are not guarantees of generalization or clinical suitability.
+
 ## OrganCMNIST and OrganSMNIST defense pilots
 
 The initial validation-only pilots each completed 12 conditions: seeds 42, 49
@@ -139,11 +286,11 @@ varied: for example, median achieved 22.92% on seed 42 and 91.67% on seed
 
 ### Decision and next steps
 
-The three-epoch candidate is more informative than the one-epoch setting,
-but three seeds do not establish stability. The dataset-specific criteria
-below are now frozen for fresh 40-condition comparisons on harmonized seeds
-42–51. OrganSMNIST is an exploratory comparison with a known femur-right
-limitation. Broader matrices and test evaluation remain separate decisions.
+The three-epoch candidate was more informative than the one-epoch setting,
+but three seeds alone did not establish stability. The subsequently completed
+40-condition comparisons are summarized above. OrganSMNIST remains exploratory
+with a known femur-right limitation. Broader matrices and test evaluation
+remain separate decisions.
 
 ### Three-epoch matched attack pilot
 
@@ -212,6 +359,8 @@ an improvement. For OrganSMNIST seed 49, attacked kidney-left recall fell to
 zero under both methods.
 
 #### Frozen OrganCMNIST and OrganSMNIST comparisons
+
+The completed comparisons above followed this frozen protocol:
 
 For each dataset, run all 40 conditions **fresh**: seeds 42–51, FedAvg and
 median, each clean and with four of 20 clients flipping 100% of kidney-left

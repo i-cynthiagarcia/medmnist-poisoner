@@ -53,12 +53,12 @@ Research Questions:
 - Exploratory validation-only defense comparison completed for the four-client, 100%-flip OrganAMNIST attack. All ten median attack runs are valid, but only nine have completed median-clean controls; the comparison also reuses historical FedAvg records without source/environment manifests.
 - The frozen 40-run OrganAMNIST comparison at learning rate 0.01 completed with no failed conditions. Both aggregations passed the 75% mean clean-accuracy floor; median had a 17.82 pp smaller mean attack-induced targeted-error increase.
 - The planned [OrganAMNIST defense matrix](quickstart-pytorch/defense_results.md#planned-organamnist-attack-matrix) varies poisoned clients and flip rates using the matched 0.01 controls. It retains the documented weak clean recall for some classes and seeds; passing the accuracy floor does not resolve that limitation.
-- OrganCMNIST and OrganSMNIST each completed one-epoch and three-epoch matched defense pilots. In the three-epoch pilots, median had a smaller mean kidney-targeted error increase than FedAvg, while OrganSMNIST femur-right recall remained near zero even when clean. The [fresh 40-condition comparisons](quickstart-pytorch/README.md#organcmnist-and-organsmnist-frozen-comparisons) are frozen with dataset-specific clean floors; the OrganSMNIST comparison remains exploratory.
+- OrganCMNIST and OrganSMNIST each completed the [frozen 40-condition comparisons](quickstart-pytorch/defense_results.md#organcmnist-and-organsmnist-matched-40-run-comparisons) with both aggregations passing both mean clean floors. Median reduced the mean attack-induced targeted-error increase by 9.92 pp and 7.93 pp, respectively, versus FedAvg; OrganSMNIST seed 44 favored FedAvg. Attacked kidney-left recall remained low. OrganSMNIST is exploratory: clean femur-right recall averaged 25.05% / 28.00% (FedAvg / median) but was zero for both on five seeds. Femur-right is a quality check, not the kidney-label-flipping target.
 
 **Documentation:**
 - Detailed baseline results in [quickstart-pytorch/baseline_results.md](quickstart-pytorch/baseline_results.md)
 - Comprehensive poisoning results and protocol progression in [quickstart-pytorch/poisoning_results.md](quickstart-pytorch/poisoning_results.md)
-- Defense pilot and per-seed validation comparison in [quickstart-pytorch/defense_results.md](quickstart-pytorch/defense_results.md)
+- Defense pilots and per-seed validation comparisons in [quickstart-pytorch/defense_results.md](quickstart-pytorch/defense_results.md)
 - Quickstart instructions and running experiments in [quickstart-pytorch/README.md](quickstart-pytorch/README.md)
 
 ## References
