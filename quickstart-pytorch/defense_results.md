@@ -521,8 +521,33 @@ and their median-minus-FedAvg difference, with class recall, accuracy, loss
 and per-seed outcomes. Treat the matrix as descriptive unless a multiple-
 comparison analysis is specified in advance. These results remain
 validation-only and retain the known clean class-level limitations.
-OrganCMNIST and OrganSMNIST require their own preliminary checks before
-adopting settings; their completed pilots are summarized above.
+OrganCMNIST and OrganSMNIST completed their own preliminary checks and
+40-condition comparisons, summarized above.
+
+### Planned OrganCMNIST and OrganSMNIST attack matrices
+
+The proposed expansions use the same attack matrix, aggregations and seeds as
+OrganAMNIST, with each dataset's frozen three-epoch settings. For each
+dataset, reuse the 20 matched clean controls and 20 four-client/100% attacks
+from its completed `protocol-v8` comparison, leaving 300 new attacked
+conditions. The new attacks use `generation-v1/protocol-v9`. Reuse is
+conditional on reference records, artifacts, source hashes, dataset archive
+and environment passing preflight checks.
+
+Analyze each setting using matched within-seed attack changes and the same
+median-minus-FedAvg interaction as the original comparisons. Report all
+seeds, attack counts, clean and attacked accuracy, targeted error,
+kidney-left and all-class recall, and loss; do not infer general protection
+from an average. Treat the full matrix as descriptive unless an inferential
+and multiple-comparison plan is specified in advance. OrganSMNIST remains
+exploratory, and its femur-right weakness is a separate clean-quality
+limitation, not a second attack. The datasets have different local-epoch
+settings, so differences between datasets cannot be attributed solely to
+dataset identity.
+
+The [sweep instructions](README.md#organcmnist-and-organsmnist-defense-matrix-sweeps)
+describe execution, reference checks, failure handling and the optional
+all-dataset launcher. Tests remain unused.
 
 ## 0.01 learning-rate pilot
 

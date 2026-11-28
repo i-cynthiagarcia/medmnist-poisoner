@@ -643,6 +643,82 @@ retry automatically. Preserve the output and log, and do not restart the whole
 sweep to repair a failed condition; investigate and apply the frozen retry
 rules first. Test evaluation remains disabled.
 
+#### OrganCMNIST and OrganSMNIST defense matrix sweeps
+
+The [planned matrices](defense_results.md#planned-organcmnist-and-organsmnist-attack-matrices)
+use the OrganAMNIST matrix and seeds, but retain three local epochs and the
+dataset-specific clean criteria. The runner reuses 20 matched clean controls
+and 20 four-client/100% attack records per dataset from the completed
+`protocol-v8/run-1` (OrganC) and `protocol-v8/run-2` (OrganS) comparisons.
+It then runs 300 new attacks per dataset under `protocol-v9`: 1, 2, 4 and 8
+poisoned clients × 0.25, 0.5, 0.75 and 1.0 flip fractions, excluding the
+already completed four-client/1.0 setting. Client and example selections are
+seeded and nested; flip counts are rounded per client.
+
+Before running, preserve the reference results and models, commit the intended
+source, tests and documentation, and activate the same Python environment as
+the comparisons. The runner requires a clean tracked working tree and
+committed runner; it checks both complete reference comparisons, clean floors,
+source and runner hashes, dataset archives, dependencies and environment
+before training. It hashes the reference records, partition manifests and
+model artifacts, verifies those hashes after each 20-condition setting, and
+records them in the new manifest. It also checks each new record, model paths,
+seeded attackers, rounded flip counts and partition summaries. Those
+summaries contain counts, not individual indices; matching assignments also
+relies on the seeded implementation and environment. Source, revision,
+environment or dataset drift stops the remaining work.
+
+From `quickstart-pytorch/`, run OrganC and OrganS sequentially:
+
+```bash
+set -o pipefail
+log=$(mktemp "$HOME/organc-organs-defense-matrix.XXXXXX.log")
+if python -u run_organ_cs_defense_sweep.py 2>&1 | tee "$log"; then
+  status=0
+else
+  status=$?
+fi
+echo "Sweep log: $log"
+echo "Sweep exit status: $status"
+```
+
+Each dataset has a separate non-overwriting execution directory with a
+`sweep-manifest.json` and incrementally updated `sweep-outcome.json`. Ordinary
+condition failures are recorded and the remaining conditions continue; a
+provenance failure stops subsequent work. The runner does not retry or resume
+automatically. Preserve the original outputs and log, investigate failures,
+and follow the frozen retry rules rather than rerunning the whole sweep.
+Test evaluation remains disabled.
+
+#### All three expanded defense sweeps
+
+The optional launcher preflights all three datasets before starting, then runs
+OrganA followed by OrganC and OrganS sequentially. This is **900 new
+conditions**, not a pilot. If a child sweep exits nonzero, the launcher stops
+and reports that the remaining sweeps were not attempted. Individual
+sweep runners remain available as above. The launcher currently supports
+expanded sweeps only; it does not rerun the historical 12- or 40-run stages.
+
+After committing and activating the reference environment, from
+`quickstart-pytorch/`:
+
+```bash
+set -o pipefail
+log=$(mktemp "$HOME/all-organ-defense-matrices.XXXXXX.log")
+if python -u run_organ_defense_sweeps.py 2>&1 | tee "$log"; then
+  status=0
+else
+  status=$?
+fi
+echo "Sweep log: $log"
+echo "Sweep exit status: $status"
+```
+
+Check available disk space and runtime budget first. Keep the existing
+reference outputs and checkpoints; do not remove or modify them during a
+sweep. OrganSMNIST remains exploratory, and passing its mean floors does not
+resolve its class-level weaknesses.
+
 Select `aggregation="median"` in a direct Flower run to use the defense with
 either baseline or label-flipping training; the default is `fedavg`. For each
 floating-point model coordinate, median sorts the client values and returns
